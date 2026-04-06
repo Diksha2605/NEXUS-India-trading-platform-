@@ -1,0 +1,35 @@
+[
+  {
+    "type": "SELL",
+    "symbol": "RELIANCE",
+    "buy_price": 1350.0,
+    "sell_price": 1350.0,
+    "quantity": 1,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "result": "WIN",
+    "timestamp": "04 Apr 2026 14:28:03"
+  },
+  {
+    "type": "SELL",
+    "symbol": "HDFCBANK",
+    "buy_price": 735.0,
+    "sell_price": 2363.5,
+    "quantity": 2,
+    "pnl": 3257.0,
+    "pnl_pct": 221.56,
+    "result": "WIN",
+    "timestamp": "04 Apr 2026 14:59:37"
+  },
+  {
+    "type": "SELL",
+    "symbol": "RELIANCE",
+    "buy_price": 1350.0,
+    "sell_price": 1350.0,
+    "quantity": 2,
+    "pnl": 0.0,
+    "pnl_pct": 0.0,
+    "result": "WIN",
+    "timestamp": "04 Apr 2026 16:16:15"
+  }
+]

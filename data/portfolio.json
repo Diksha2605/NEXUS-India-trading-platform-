@@ -1,0 +1,31 @@
+{
+  "cash": 94398.5,
+  "starting": 100000,
+  "holdings": {
+    "TCS": {
+      "quantity": 1,
+      "avg_price": 2363.5,
+      "invested": 2363.5,
+      "sl": 2370.5,
+      "tp": 2349.51
+    },
+    "HDFCBANK": {
+      "quantity": 7,
+      "avg_price": 735.0,
+      "invested": 5145.0,
+      "sl": 731.36,
+      "tp": 742.29
+    },
+    "RELIANCE": {
+      "quantity": 1,
+      "avg_price": 1350.0,
+      "invested": 1350.0,
+      "sl": 1355.73,
+      "tp": 1338.54
+    }
+  },
+  "created": "04 Apr 2026",
+  "total_trades": 10,
+  "winning_trades": 3,
+  "losing_trades": 0
+}

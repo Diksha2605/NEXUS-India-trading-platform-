@@ -1,0 +1,1222 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS India — Paper Trading</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#020508;--bg2:#050d14;--bg3:#091520;--panel:#0a1a28;--border:#0d3a5c;--border2:#0f4a78;--accent:#00d4ff;--accent2:#00ff9d;--accent3:#ff6b35;--gold:#ffd700;--red:#ff3860;--text:#c8dce8;--text-dim:#4a7a9b;--text-bright:#e8f4ff;--up:#00ff9d;--down:#ff3860;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:9999;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.container{position:relative;z-index:1;padding:0 16px 24px;max-width:1400px;margin:0 auto;}
+/* NAV */
+.nav{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:12px;}
+.nav-btn{padding:10px 20px;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;border:none;background:transparent;color:var(--text-dim);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;}
+.nav-btn:hover{color:var(--accent);}
+.nav-btn.active{color:var(--accent2);border-bottom-color:var(--accent2);}
+/* SCREENS */
+.screen{display:none;}
+.screen.active{display:block;}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(0,20,40,0.95),rgba(2,5,8,0.8));position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#00d4ff,#00ff9d);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);animation:pulse-icon 3s ease-in-out infinite;}
+@keyframes pulse-icon{0%,100%{filter:drop-shadow(0 0 6px rgba(0,212,255,0.8))}50%{filter:drop-shadow(0 0 14px rgba(0,255,157,0.9))}}
+.logo-text{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;letter-spacing:4px;background:linear-gradient(90deg,#00d4ff,#00ff9d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-sub{font-size:9px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2);}
+.live-dot{width:7px;height:7px;background:var(--accent2);border-radius:50%;animation:blink 1s ease-in-out infinite;box-shadow:0 0 8px var(--accent2);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.market-time{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;}
+.api-status{padding:3px 8px;border-radius:2px;font-size:9px;letter-spacing:2px;font-family:'Share Tech Mono',monospace;border:1px solid;}
+.api-status.online{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,157,0.05);}
+.api-status.offline{border-color:var(--red);color:var(--red);background:rgba(255,56,96,0.05);}
+.voice-btn{padding:5px 10px;border:1px solid var(--accent2);background:rgba(0,255,157,0.05);color:var(--accent2);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;}
+.voice-btn.off{border-color:var(--border2);color:var(--text-dim);background:transparent;}
+.tf-bar{display:flex;gap:6px;padding:10px 0 8px;align-items:center;}
+.tf-label{font-size:11px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.tf-btn{padding:6px 14px;border:1px solid var(--border2);background:var(--bg3);color:var(--text-dim);font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all 0.2s;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);position:relative;}
+.tf-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(0,255,157,0.1);}
+.tf-btn .rec-tag{position:absolute;top:-7px;right:3px;font-size:6px;background:var(--accent2);color:#000;padding:1px 3px;font-weight:900;}
+.main-grid{display:grid;grid-template-columns:1fr 300px;gap:12px;}
+.left-col,.right-col{display:flex;flex-direction:column;gap:12px;}
+.panel{background:var(--panel);border:1px solid var(--border);position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.4;}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(0,212,255,0.03);}
+.panel-title{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:3px;color:var(--accent);}
+.panel-badge{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);}
+.asset-tabs{display:flex;gap:2px;padding:8px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3);flex-wrap:wrap;}
+.asset-tab{padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;border:1px solid var(--border);color:var(--text-dim);background:transparent;transition:all 0.2s;}
+.asset-tab:hover{border-color:var(--accent);color:var(--accent);}
+.asset-tab.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent);}
+.signal-card{padding:14px;}
+.dir-badge{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;letter-spacing:2px;padding:5px 12px;border:2px solid;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+.dir-badge.up{color:var(--up);border-color:var(--up);background:rgba(0,255,157,0.08);animation:glow-up 2s ease-in-out infinite;}
+.dir-badge.down{color:var(--down);border-color:var(--down);background:rgba(255,56,96,0.08);}
+@keyframes glow-up{0%,100%{box-shadow:0 0 16px rgba(0,255,157,0.25)}50%{box-shadow:0 0 28px rgba(0,255,157,0.5)}}
+.conf-row{display:flex;align-items:center;gap:8px;margin:10px 0;}
+.conf-bar-wrap{flex:1;height:5px;background:var(--bg3);border:1px solid var(--border);}
+.conf-bar-fill{height:100%;background:linear-gradient(90deg,#00d4ff,#00ff9d);transition:width 0.8s ease;}
+.conf-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--accent2);width:38px;text-align:right;}
+.price-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:10px 0;}
+.price-cell{background:var(--bg3);border:1px solid var(--border);padding:7px 10px;}
+.price-cell-label{font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;margin-bottom:3px;}
+.price-cell-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;}
+.price-cell.entry .price-cell-val{color:var(--accent);}
+.price-cell.sl .price-cell-val{color:var(--down);}
+.price-cell.tp .price-cell-val{color:var(--up);}
+.why-box{padding:8px 12px;background:rgba(0,0,0,0.3);border-left:2px solid var(--accent);font-size:11px;line-height:1.8;font-family:'Share Tech Mono',monospace;}
+.why-box .reason{color:var(--accent2);display:block;}
+.btn{padding:8px 16px;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;border:none;transition:all 0.2s;}
+.btn-buy{background:rgba(0,255,157,0.15);color:var(--up);border:2px solid var(--up);}
+.btn-buy:hover{background:rgba(0,255,157,0.3);}
+.btn-sell{background:rgba(255,56,96,0.15);color:var(--down);border:2px solid var(--down);}
+.btn-sell:hover{background:rgba(255,56,96,0.3);}
+.btn-accent{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid var(--accent);}
+.btn-accent:hover{background:rgba(0,212,255,0.2);}
+.btn-sm{padding:5px 12px;font-size:9px;}
+/* ORDER MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--accent);padding:0;width:360px;max-width:95vw;}
+.modal-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:2px;}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;}
+.modal-body{padding:16px;display:grid;gap:12px;}
+.form-group{display:grid;gap:4px;}
+.form-label{font-size:9px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.form-input{background:var(--bg3);border:1px solid var(--border2);color:var(--text-bright);font-family:'Orbitron',monospace;font-size:13px;padding:8px 10px;width:100%;outline:none;}
+.form-input:focus{border-color:var(--accent);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.order-summary{background:var(--bg3);border:1px solid var(--border);padding:10px;display:grid;gap:4px;font-family:'Share Tech Mono',monospace;font-size:10px;}
+.order-sum-row{display:flex;justify-content:space-between;}
+.modal-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+/* PORTFOLIO SCREEN */
+.pf-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:12px;}
+.pf-stat{background:var(--panel);padding:14px 12px;text-align:center;}
+.pf-stat-val{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;line-height:1;margin-bottom:3px;}
+.pf-stat-label{font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.holdings-table{width:100%;border-collapse:collapse;}
+.holdings-table th{font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);font-weight:normal;}
+.holdings-table td{padding:9px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;border-bottom:1px solid rgba(13,58,92,0.4);}
+.holdings-table tr:hover td{background:rgba(0,212,255,0.04);}
+.history-list{list-style:none;max-height:300px;overflow-y:auto;}
+.history-item{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid rgba(13,58,92,0.4);font-family:'Share Tech Mono',monospace;font-size:11px;}
+.scan-table{width:100%;border-collapse:collapse;}
+.scan-table th{font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);font-weight:normal;}
+.scan-table td{padding:8px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;border-bottom:1px solid rgba(13,58,92,0.4);}
+.scan-table tr:hover td{background:rgba(0,212,255,0.04);cursor:pointer;}
+.sig-pill{display:inline-block;padding:2px 7px;font-size:8px;font-family:'Orbitron',monospace;font-weight:700;clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);}
+.sig-pill.up{background:rgba(0,255,157,0.15);color:var(--up);border:1px solid var(--up);}
+.sig-pill.dn{background:rgba(255,56,96,0.15);color:var(--down);border:1px solid var(--down);}
+.sig-pill.nt{background:rgba(255,215,0,0.1);color:var(--gold);border:1px solid var(--gold);}
+.countdown-main{font-family:'Orbitron',monospace;font-size:30px;font-weight:900;color:var(--accent);letter-spacing:4px;text-shadow:0 0 20px rgba(0,212,255,0.6);}
+.countdown-main.urgent{color:var(--accent3);animation:tick-flash 0.5s ease infinite;}
+@keyframes tick-flash{0%,100%{opacity:1}50%{opacity:0.6}}
+.cp-bar{height:6px;background:var(--bg3);border:1px solid var(--border);margin:0 16px 6px;}
+.cp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 1s linear;}
+.pred-grid{display:grid;gap:6px;padding:12px;}
+.pred-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);}
+.pred-row.up{border-color:rgba(0,255,157,0.3);}
+.pred-row.down{border-color:rgba(255,56,96,0.3);}
+.loading-overlay{display:flex;align-items:center;justify-content:center;padding:24px;}
+.loading-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;animation:blink 1s ease infinite;}
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:2px;font-family:'Share Tech Mono',monospace;font-size:12px;z-index:9999;display:none;max-width:300px;}
+.toast.show{display:block;animation:slide-in 0.3s ease;}
+.toast.success{background:rgba(0,255,157,0.15);border:1px solid var(--up);color:var(--up);}
+.toast.error{background:rgba(255,56,96,0.15);border:1px solid var(--down);color:var(--down);}
+.toast.info{background:rgba(0,212,255,0.1);border:1px solid var(--accent);color:var(--accent);}
+@keyframes slide-in{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+footer{margin-top:16px;padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);}
+.disclaimer{color:rgba(255,56,96,0.6);font-size:8px;max-width:500px;}
+@media(max-width:900px){
+  .main-grid{grid-template-columns:1fr;}
+  .pf-stats{grid-template-columns:repeat(2,1fr);}
+  .nav-btn{padding:8px 12px;font-size:9px;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div>
+      <div class="logo-text">NEXUS INDIA</div>
+      <div class="logo-sub">LIVE · AI SIGNALS · PAPER TRADING</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div><span>LIVE</span></div>
+    <div class="market-time" id="mktTime">--:--:--</div>
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🔊 ON</button>
+    <div class="api-status offline" id="apiStatus">OFFLINE</div>
+  </div>
+</header>
+<!-- NAVIGATION -->
+<div class="container">
+  <div class="nav">
+    <button class="nav-btn active" onclick="showScreen('signals',this)">📈 SIGNALS</button>
+    <button class="nav-btn" onclick="showScreen('portfolio',this)">💼 PORTFOLIO</button>
+    <button class="nav-btn" onclick="showScreen('orders',this)">📋 ORDERS</button>
+    <button class="nav-btn" onclick="showScreen('scanner',this)">🔍 SCANNER</button>
+  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN 1: SIGNALS                                   -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="screen active" id="screen-signals">
+    <div class="tf-bar">
+      <span class="tf-label">TF ▸</span>
+      <button class="tf-btn" onclick="switchTF(this,'1m')">1M</button>
+      <button class="tf-btn active" onclick="switchTF(this,'5m')">5M <span class="rec-tag">REC</span></button>
+      <button class="tf-btn" onclick="switchTF(this,'15m')">15M</button>
+      <button class="tf-btn" onclick="switchTF(this,'1h')">1H</button>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-accent btn-sm" onclick="refreshAll()">↻ REFRESH</button>
+      </div>
+    </div>
+    <div class="main-grid">
+      <div class="left-col">
+        <!-- SIGNAL CARD -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">ACTIVE SIGNAL</span>
+            <span class="panel-badge" id="signalTFBadge">5M · INTRADAY</span>
+          </div>
+          <div class="asset-tabs">
+            <button class="asset-tab active" onclick="selectAsset(this,'RELIANCE')">RELIANCE</button>
+            <button class="asset-tab" onclick="selectAsset(this,'TCS')">TCS</button>
+            <button class="asset-tab" onclick="selectAsset(this,'HDFCBANK')">HDFCBANK</button>
+          </div>
+          <div class="signal-card" id="signalCard">
+            <div class="loading-overlay"><div class="loading-text">FETCHING SIGNAL ...</div></div>
+          </div>
+        </div>
+        <!-- CHART -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title" id="chartTitle">RELIANCE — 5M CHART</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span class="panel-badge" id="chartInfo">--</span>
+              <button class="btn btn-accent btn-sm" onclick="loadChart()">↻</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;padding:6px 12px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);flex-wrap:wrap;align-items:center;">
+            <button class="asset-tab" onclick="setChartLen(this,30)"  style="padding:2px 7px;font-size:9px;">30</button>
+            <button class="asset-tab active" onclick="setChartLen(this,60)" style="padding:2px 7px;font-size:9px;">60</button>
+            <button class="asset-tab" onclick="setChartLen(this,100)" style="padding:2px 7px;font-size:9px;">100</button>
+            <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;">
+              <span id="chartLastPrice" style="color:var(--accent);">--</span>
+              <span id="chartLastChange" style="margin-left:6px;">--</span>
+            </span>
+          </div>
+          <div style="padding:10px;background:var(--bg2);">
+            <canvas id="chartCanvas" style="width:100%;height:260px;display:block;"></canvas>
+          </div>
+          <div style="display:flex;gap:10px;padding:6px 12px;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:9px;flex-wrap:wrap;">
+            <span style="color:var(--up);">▮ Bull</span>
+            <span style="color:var(--down);">▮ Bear</span>
+            <span style="color:var(--accent);">── EMA9</span>
+            <span style="color:var(--gold);">── EMA21</span>
+            <span style="color:rgba(255,107,53,0.8);">⋯ Pred</span>
+            <span style="color:rgba(0,212,255,0.6);">── E</span>
+            <span style="color:rgba(255,56,96,0.7);">── SL</span>
+            <span style="color:rgba(0,255,157,0.7);">── TP</span>
+          </div>
+        </div>
+        <!-- PREDICTIONS -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">MULTI-CANDLE PREDICTION</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span class="panel-badge" id="predBadge">NEXT 5 CANDLES</span>
+              <button class="btn btn-accent btn-sm" onclick="loadPredictions()">↻ PREDICT</button>
+            </div>
+          </div>
+          <div id="predPanel">
+            <div class="loading-overlay"><div class="loading-text">CLICK PREDICT ...</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="right-col">
+        <!-- COUNTDOWN -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">CANDLE TIMER</span>
+            <span class="panel-badge" id="timerTF">5M</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
+            <div>
+              <div class="countdown-main" id="cdDisplay">--:--</div>
+              <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;margin-top:3px;">NEXT CANDLE</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--text-bright);" id="cdCount">--</div>
+              <div style="font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;" id="cdTotal">/ -- TODAY</div>
+            </div>
+          </div>
+          <div class="cp-bar"><div class="cp-fill" id="cpFill" style="width:0%"></div></div>
+          <div style="padding:3px 16px 10px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);" id="cpPct">0%</div>
+        </div>
+        <!-- QUICK TRADE -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">PAPER TRADE</span>
+            <span class="panel-badge" id="availCash">Cash: --</span>
+          </div>
+          <div style="padding:12px;display:grid;gap:8px;">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);">
+              Stock: <span id="tradeSymbol" style="color:var(--accent);font-weight:bold;">RELIANCE</span>
+              &nbsp;|&nbsp; Price: <span id="tradePrice" style="color:var(--accent2);">Rs.--</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div>
+                <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px;font-family:'Share Tech Mono',monospace;margin-bottom:3px;">QUANTITY</div>
+                <input type="number" id="tradeQty" value="1" min="1"
+                  style="background:var(--bg3);border:1px solid var(--border2);color:var(--text-bright);font-family:'Orbitron',monospace;font-size:13px;padding:6px 8px;width:100%;outline:none;">
+              </div>
+              <div>
+                <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px;font-family:'Share Tech Mono',monospace;margin-bottom:3px;">TOTAL COST</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);padding:6px 8px;font-family:'Orbitron',monospace;font-size:12px;color:var(--gold);" id="tradeCost">--</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <button class="btn btn-buy" onclick="openBuyModal()">▲ BUY</button>
+              <button class="btn btn-sell" onclick="openSellModal()">▼ SELL</button>
+            </div>
+            <div style="font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;text-align:center;">
+              Paper trade — virtual money only
+            </div>
+          </div>
+        </div>
+        <!-- VOICE -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">VOICE CONTROL</span>
+            <span class="panel-badge" id="voiceBadge">ON</span>
+          </div>
+          <div style="padding:10px 12px;display:grid;gap:8px;">
+            <button onclick="toggleVoice()" id="voiceBigBtn"
+              style="padding:10px;border:2px solid var(--accent2);background:rgba(0,255,157,0.08);color:var(--accent2);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;width:100%;">
+              🔊 VOICE ON
+            </button>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;display:grid;gap:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:6px;">
+                <span style="color:var(--text-dim);">SIGNALS</span>
+                <input type="checkbox" id="chkSignal" checked style="accent-color:var(--accent2);">
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:6px;">
+                <span style="color:var(--text-dim);">TRADES</span>
+                <input type="checkbox" id="chkTrade" checked style="accent-color:var(--accent2);">
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;">
+                <span style="color:var(--text-dim);">SPEED</span>
+                <input type="range" id="voiceRate" min="0.7" max="1.5" step="0.1" value="1.0" style="width:80px;accent-color:var(--accent2);">
+              </div>
+            </div>
+            <button onclick="testVoice()" style="padding:6px;border:1px solid var(--accent);background:rgba(0,212,255,0.05);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;cursor:pointer;">▶ TEST</button>
+            <div style="background:var(--bg3);border:1px solid var(--border);padding:6px;font-size:10px;color:var(--accent2);font-family:'Share Tech Mono',monospace;min-height:30px;" id="voiceLog">--</div>
+          </div>
+        </div>
+        <!-- INDICATORS -->
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">INDICATORS</span>
+            <span class="panel-badge" id="indTF">LAST CANDLE</span>
+          </div>
+          <div style="padding:10px 12px;display:grid;gap:5px;" id="indicatorPanel">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:8px;">Load chart to see</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN 2: PORTFOLIO                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-portfolio">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;">
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;">MY PORTFOLIO</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-accent btn-sm" onclick="loadPortfolio()">↻ REFRESH</button>
+        <button class="btn btn-sm" onclick="confirmReset()"
+          style="background:rgba(255,56,96,0.1);color:var(--down);border:1px solid var(--down);font-family:'Orbitron',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;">
+          RESET
+        </button>
+      </div>
+    </div>
+    <!-- Stats -->
+    <div class="pf-stats">
+      <div class="pf-stat">
+        <div class="pf-stat-val" id="pfTotalVal" style="color:var(--accent);">--</div>
+        <div class="pf-stat-label">TOTAL VALUE</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat-val" id="pfPnl">--</div>
+        <div class="pf-stat-label">OVERALL P&L</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat-val" id="pfCash" style="color:var(--gold);">--</div>
+        <div class="pf-stat-label">AVAILABLE CASH</div>
+      </div>
+      <div class="pf-stat">
+        <div class="pf-stat-val" id="pfWinRate" style="color:var(--accent2);">--%</div>
+        <div class="pf-stat-label">WIN RATE</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <!-- Holdings -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-title">HOLDINGS</span>
+          <span class="panel-badge" id="holdingsCount">0 stocks</span>
+        </div>
+        <div id="holdingsPanel">
+          <div class="loading-overlay"><div class="loading-text">LOADING ...</div></div>
+        </div>
+      </div>
+      <!-- Trade History -->
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="panel-title">TRADE HISTORY</span>
+          <span class="panel-badge" id="histCount">0 trades</span>
+        </div>
+        <ul class="history-list" id="historyList">
+          <li style="padding:16px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);">No trades yet</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN 3: ORDERS                                    -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-orders">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;">
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;">ORDER BOOK</div>
+      <button class="btn btn-accent btn-sm" onclick="loadOrders()">↻ REFRESH</button>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title">ALL ORDERS</span>
+        <span class="panel-badge" id="ordersCount">0 orders</span>
+      </div>
+      <div id="ordersPanel">
+        <div class="loading-overlay"><div class="loading-text">LOADING ...</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN 4: SCANNER                                   -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-scanner">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--accent);letter-spacing:2px;">SIGNAL SCANNER</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="tf-btn" onclick="setScanTF(this,'1m')" style="padding:5px 10px;">1M</button>
+        <button class="tf-btn active" onclick="setScanTF(this,'5m')" style="padding:5px 10px;">5M</button>
+        <button class="tf-btn" onclick="setScanTF(this,'15m')" style="padding:5px 10px;">15M</button>
+        <button class="btn btn-accent btn-sm" onclick="runScan()">↻ SCAN ALL</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;" id="scanStats">
+      <div class="panel" style="padding:12px;text-align:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--accent);" id="scanTotal">--</div>
+        <div style="font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;">SCANNED</div>
+      </div>
+      <div class="panel" style="padding:12px;text-align:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--up);" id="scanTradeable">--</div>
+        <div style="font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;">TRADEABLE</div>
+      </div>
+      <div class="panel" style="padding:12px;text-align:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--gold);" id="scanAvgConf">--%</div>
+        <div style="font-size:8px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;">AVG CONF</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="panel-title">TOP SIGNALS</span>
+        <span class="panel-badge" id="scanTime">--</span>
+      </div>
+      <div id="scanResults">
+        <div class="loading-overlay"><div class="loading-text">CLICK SCAN ALL ...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- BUY MODAL -->
+<div class="modal-overlay" id="buyModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">▲ PLACE BUY ORDER</span>
+      <button class="modal-close" onclick="closeBuyModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--text-bright);" id="modalSymbol">RELIANCE</div>
+        <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent);" id="modalPrice">--</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">QUANTITY</label>
+          <input class="form-input" type="number" id="buyQty" value="1" min="1" oninput="updateBuySummary()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">PRICE (AUTO)</label>
+          <input class="form-input" type="number" id="buyPrice" oninput="updateBuySummary()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">STOP LOSS</label>
+          <input class="form-input" type="number" id="buySL" placeholder="Optional">
+        </div>
+        <div class="form-group">
+          <label class="form-label">TARGET</label>
+          <input class="form-input" type="number" id="buyTP" placeholder="Optional">
+        </div>
+      </div>
+      <div class="order-summary">
+        <div class="order-sum-row">
+          <span style="color:var(--text-dim);">Total Cost</span>
+          <span style="color:var(--gold);font-family:'Orbitron',monospace;font-weight:700;" id="buyTotal">--</span>
+        </div>
+        <div class="order-sum-row">
+          <span style="color:var(--text-dim);">Available Cash</span>
+          <span style="color:var(--accent2);" id="buyAvail">--</span>
+        </div>
+        <div class="order-sum-row">
+          <span style="color:var(--text-dim);">After Trade</span>
+          <span id="buyAfter">--</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-buy" style="flex:1;" onclick="executeBuy()">▲ CONFIRM BUY</button>
+      <button class="btn btn-sm" onclick="closeBuyModal()" style="background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;padding:8px 16px;">CANCEL</button>
+    </div>
+  </div>
+</div>
+<!-- SELL MODAL -->
+<div class="modal-overlay" id="sellModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">▼ PLACE SELL ORDER</span>
+      <button class="modal-close" onclick="closeSellModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--text-bright);" id="sellModalSymbol">RELIANCE</div>
+        <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:700;color:var(--accent);" id="sellModalPrice">--</div>
+      </div>
+      <div id="sellHolding" style="background:var(--bg3);border:1px solid var(--border);padding:8px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;margin-bottom:4px;"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">QUANTITY TO SELL</label>
+          <input class="form-input" type="number" id="sellQty" value="1" min="1" oninput="updateSellSummary()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">SELL PRICE</label>
+          <input class="form-input" type="number" id="sellPrice" oninput="updateSellSummary()">
+        </div>
+      </div>
+      <div class="order-summary">
+        <div class="order-sum-row">
+          <span style="color:var(--text-dim);">Sell Value</span>
+          <span style="color:var(--accent2);font-family:'Orbitron',monospace;font-weight:700;" id="sellValue">--</span>
+        </div>
+        <div class="order-sum-row">
+          <span style="color:var(--text-dim);">Estimated P&L</span>
+          <span id="sellPnl" style="font-family:'Orbitron',monospace;font-weight:700;">--</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sell" style="flex:1;" onclick="executeSell()">▼ CONFIRM SELL</button>
+      <button class="btn btn-sm" onclick="closeSellModal()" style="background:var(--bg3);color:var(--text-dim);border:1px solid var(--border);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;padding:8px 16px;">CANCEL</button>
+    </div>
+  </div>
+</div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<footer>
+  <div>NEXUS INDIA · PAPER TRADING · AI SIGNALS · MARCH 2026</div>
+  <div class="disclaimer">⚠ NOT SEBI REGISTERED · PAPER TRADING ONLY · NOT FINANCIAL ADVICE</div>
+</footer>
+<script>
+const API = "http://localhost:8000";
+const state = {
+  tf:"5m", asset:"RELIANCE",
+  countdown:240, candlesDone:0,
+  signalData:null, chartData:null, predictions:null,
+  portfolio:null, currentPrice:0,
+  scanTF:"5m", chartLen:60,
+  autoRefresh:null,
+};
+const TF_META = {
+  "1m":  {label:"1M",  seconds:60,   maxCandles:375, badge:"1M · SCALPING"},
+  "5m":  {label:"5M",  seconds:300,  maxCandles:75,  badge:"5M · INTRADAY"},
+  "15m": {label:"15M", seconds:900,  maxCandles:25,  badge:"15M · SWING"},
+  "1h":  {label:"1H",  seconds:3600, maxCandles:7,   badge:"1H · POSITIONAL"},
+};
+// ── VOICE ─────────────────────────────────────────────────
+const voice = { on:true, synth:window.speechSynthesis };
+window.speechSynthesis.onvoiceschanged = ()=>voice.synth.getVoices();
+function getBestVoice(){
+  const v=voice.synth.getVoices();
+  return v.find(x=>x.lang==="en-IN")||v.find(x=>x.name.includes("India"))||
+         v.find(x=>x.lang==="en-GB")||v.find(x=>x.lang.startsWith("en"))||v[0]||null;
+}
+function speak(text,priority=false){
+  if(!voice.on)return;
+  if(priority)voice.synth.cancel();
+  const msg=new SpeechSynthesisUtterance(text);
+  const v=getBestVoice(); if(v)msg.voice=v;
+  msg.rate=parseFloat(document.getElementById("voiceRate").value)||1.0;
+  msg.volume=1.0; msg.pitch=1.0;
+  voice.synth.speak(msg);
+  document.getElementById("voiceLog").textContent=text;
+}
+function toggleVoice(){
+  voice.on=!voice.on;
+  const bb=document.getElementById("voiceBigBtn");
+  const hb=document.getElementById("voiceBtn");
+  const ba=document.getElementById("voiceBadge");
+  if(voice.on){
+    bb.textContent="🔊 VOICE ON";bb.style.borderColor="var(--accent2)";bb.style.color="var(--accent2)";
+    hb.textContent="🔊 ON";hb.className="voice-btn";ba.textContent="ON";
+    speak("Voice enabled.",true);
+  } else {
+    bb.textContent="🔇 VOICE OFF";bb.style.borderColor="var(--border2)";bb.style.color="var(--text-dim)";
+    hb.textContent="🔇 OFF";hb.className="voice-btn off";ba.textContent="OFF";
+    voice.synth.cancel();
+  }
+}
+function testVoice(){speak("NEXUS India paper trading. Buy Reliance 10 shares at 2847. Paper trade executed.",true);}
+// ── TOAST ──────────────────────────────────────────────────
+function showToast(msg,type="info"){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.className=`toast ${type} show`;
+  setTimeout(()=>t.classList.remove("show"),3500);
+}
+// ── SCREEN NAV ─────────────────────────────────────────────
+function showScreen(name,btn){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("screen-"+name).classList.add("active");
+  btn.classList.add("active");
+  if(name==="portfolio") loadPortfolio();
+  if(name==="orders")    loadOrders();
+}
+// ── CLOCK ──────────────────────────────────────────────────
+function startClock(){
+  setInterval(()=>{
+    document.getElementById("mktTime").textContent=
+      new Date().toLocaleTimeString("en-IN",{hour12:false});
+  },1000);
+}
+// ── API HEALTH ─────────────────────────────────────────────
+async function checkHealth(){
+  try{
+    await fetch(`${API}/health`,{signal:AbortSignal.timeout(3000)});
+    const el=document.getElementById("apiStatus");
+    el.textContent="ONLINE";el.className="api-status online";
+    return true;
+  }catch{
+    const el=document.getElementById("apiStatus");
+    el.textContent="OFFLINE";el.className="api-status offline";
+    return false;
+  }
+}
+// ── REFRESH ALL ────────────────────────────────────────────
+async function refreshAll(){
+  await Promise.all([refreshSignal(), loadChart()]);
+  loadPortfolio();
+}
+// ── SIGNAL ─────────────────────────────────────────────────
+async function refreshSignal(){
+  document.getElementById("signalCard").innerHTML=
+    `<div class="loading-overlay"><div class="loading-text">FETCHING ...</div></div>`;
+  try{
+    const data=await fetch(`${API}/signal?asset=${state.asset}&tf=${state.tf}`).then(r=>r.json());
+    state.signalData=data;
+    state.currentPrice=data.entry||0;
+    renderSignal(data);
+    updateTradePanel(data);
+    if(document.getElementById("chkSignal").checked && data.valid){
+      speak(`${data.direction==="UP"?"Buy":"Sell"} ${data.symbol}. Confidence ${data.confidence} percent.`,true);
+    }
+  }catch{
+    document.getElementById("signalCard").innerHTML=
+      `<div class="loading-overlay"><div style="color:var(--red);font-family:'Share Tech Mono',monospace;font-size:10px;text-align:center;">API OFFLINE<br>uvicorn api.server:app --reload --port 8000</div></div>`;
+  }
+}
+function renderSignal(d){
+  if(!d||d.error){
+    document.getElementById("signalCard").innerHTML=
+      `<div class="loading-overlay"><div style="color:var(--red);font-family:'Share Tech Mono',monospace;">${d?.error||"Error"}</div></div>`;
+    return;
+  }
+  const isUp=d.direction==="UP",conf=d.confidence||0;
+  const valid=d.valid?`<span style="color:var(--accent2);font-size:9px;font-family:'Share Tech Mono',monospace;">✓ TRADEABLE</span>`
+                     :`<span style="color:var(--gold);font-size:9px;font-family:'Share Tech Mono',monospace;">⚠ LOW CONF</span>`;
+  const reasons=(d.reasons||[]).map(r=>`<span class="reason">+ ${r}</span>`).join("")||
+    `<span style="color:var(--text-dim);">No confirmations</span>`;
+  document.getElementById("signalCard").innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-family:'Orbitron',monospace;font-size:18px;font-weight:900;color:var(--text-bright);">${d.symbol}</div>
+        <div style="font-size:10px;color:var(--text-dim);letter-spacing:2px;font-family:'Share Tech Mono',monospace;">NSE · ${d.timeframe}</div>
+        <div style="font-family:'Orbitron',monospace;font-size:22px;font-weight:900;color:var(--accent);margin-top:4px;">Rs.${d.entry}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+        <div class="dir-badge ${isUp?'up':'down'}">${isUp?'▲ BUY':'▼ SELL'}</div>
+        ${valid}
+        <div style="font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">LSTM:${d.lstm_prob}% · ${d.confirmations}/5</div>
+      </div>
+    </div>
+    <div class="conf-row">
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;font-family:'Share Tech Mono',monospace;width:80px;">CONFIDENCE</div>
+      <div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:${conf}%"></div></div>
+      <div class="conf-val">${conf}%</div>
+    </div>
+    <div class="price-grid">
+      <div class="price-cell entry"><div class="price-cell-label">ENTRY</div><div class="price-cell-val">Rs.${d.entry}</div></div>
+      <div class="price-cell sl"><div class="price-cell-label">STOP LOSS</div><div class="price-cell-val">Rs.${d.stop_loss}</div></div>
+      <div class="price-cell tp"><div class="price-cell-label">TARGET</div><div class="price-cell-val">Rs.${d.take_profit}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(0,212,255,0.04);border:1px solid var(--border);margin-bottom:10px;">
+      <span style="font-size:10px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">RISK:REWARD</span>
+      <span style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--gold);">1 : ${d.rr_ratio}</span>
+      <div style="margin-left:auto;font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">RISK Rs.${d.sl_pts} · REWARD Rs.${d.tp_pts}</div>
+    </div>
+    <div class="why-box">${reasons}</div>
+    <div style="padding:5px 0 0;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);">${d.timestamp}</div>`;
+}
+function updateTradePanel(d){
+  if(!d||d.error)return;
+  document.getElementById("tradeSymbol").textContent=d.symbol;
+  document.getElementById("tradePrice").textContent=`Rs.${d.entry}`;
+  state.currentPrice=d.entry;
+  updateTradeCost();
+}
+function updateTradeCost(){
+  const qty=parseInt(document.getElementById("tradeQty").value)||1;
+  const cost=state.currentPrice*qty;
+  document.getElementById("tradeCost").textContent=cost>0?`Rs.${cost.toFixed(2)}`:"--";
+}
+document.getElementById("tradeQty").addEventListener("input",updateTradeCost);
+// ── CHART ──────────────────────────────────────────────────
+async function loadChart(){
+  document.getElementById("chartTitle").textContent=`${state.asset} — ${TF_META[state.tf].label} CHART`;
+  document.getElementById("chartInfo").textContent="loading...";
+  try{
+    const data=await fetch(`${API}/candles?asset=${state.asset}&tf=${state.tf}&n=${state.chartLen}`).then(r=>r.json());
+    if(data.error||!data.candles){drawFallback();return;}
+    state.chartData=data.candles;
+    document.getElementById("chartInfo").textContent=`${data.candles.length} candles`;
+    drawChart(data.candles,state.signalData,state.predictions?.predictions);
+    updateIndicators(data.candles);
+  }catch{drawFallback();}
+}
+function drawChart(candles,signal,preds){
+  const canvas=document.getElementById("chartCanvas"),ctx=canvas.getContext("2d");
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const PAD={top:18,right:52,bottom:25,left:6};
+  ctx.clearRect(0,0,W,H);
+  if(!candles?.length)return;
+  const n=candles.length,np=(preds?.length||0);
+  const total=n+np+1;
+  const cw=(W-PAD.left-PAD.right)/(total+1);
+  const bw=Math.max(1.5,cw*0.6);
+  const allH=[...candles.map(c=>c.high),...(preds||[]).map(p=>p.predicted_price*1.003)];
+  const allL=[...candles.map(c=>c.low),...(preds||[]).map(p=>p.predicted_price*0.997)];
+  const minP=Math.min(...allL)*0.9993,maxP=Math.max(...allH)*1.0007,range=maxP-minP||1;
+  const toY=v=>PAD.top+(1-(v-minP)/range)*(H-PAD.top-PAD.bottom);
+  const toX=i=>PAD.left+(i+1)*cw+cw/2;
+  // Grid
+  ctx.strokeStyle="rgba(13,58,92,0.5)";ctx.lineWidth=1;
+  for(let g=0;g<=5;g++){
+    const y=PAD.top+(g/5)*(H-PAD.top-PAD.bottom);
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+    ctx.fillStyle="rgba(74,122,155,0.8)";ctx.font=`8px "Share Tech Mono"`;
+    ctx.fillText((maxP-(g/5)*range).toFixed(1),W-PAD.right+2,y+3);
+  }
+  // EMA
+  const drawEMA=(period,color)=>{
+    const closes=candles.map(c=>c.close),ema=[],k=2/(period+1);
+    closes.forEach((p,i)=>{
+      if(i<period-1){ema.push(null);return;}
+      if(i===period-1){ema.push(closes.slice(0,period).reduce((a,b)=>a+b,0)/period);return;}
+      ema.push(p*k+ema[i-1]*(1-k));
+    });
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;let s=false;
+    ema.forEach((v,i)=>{if(v===null)return;!s?(ctx.moveTo(toX(i),toY(v)),s=true):ctx.lineTo(toX(i),toY(v));});
+    ctx.stroke();
+  };
+  drawEMA(9,"rgba(0,212,255,0.8)");drawEMA(21,"rgba(255,215,0,0.6)");
+  // Candles
+  candles.forEach((c,i)=>{
+    const x=toX(i),isUp=c.close>=c.open,col=isUp?"#00ff9d":"#ff3860";
+    ctx.strokeStyle=col;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,toY(c.high));ctx.lineTo(x,toY(c.low));ctx.stroke();
+    const top=toY(Math.max(c.open,c.close)),bot=toY(Math.min(c.open,c.close)),bh=Math.max(1.5,bot-top);
+    ctx.fillStyle=isUp?"rgba(0,255,157,0.65)":"rgba(255,56,96,0.65)";
+    ctx.fillRect(x-bw/2,top,bw,bh);ctx.strokeRect(x-bw/2,top,bw,bh);
+  });
+  // Predictions
+  if(preds?.length){
+    let prev=candles[n-1].close;
+    ctx.strokeStyle="rgba(255,215,0,0.3)";ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(toX(n-1)+cw*0.8,PAD.top);ctx.lineTo(toX(n-1)+cw*0.8,H-PAD.bottom);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="rgba(255,215,0,0.4)";ctx.font=`7px "Share Tech Mono"`;
+    ctx.fillText("PRED",toX(n-1)+cw*0.8+2,PAD.top+10);
+    preds.forEach((p,i)=>{
+      const x=toX(n+i),isUp=p.direction==="UP",col=isUp?"#00ff9d":"#ff3860";
+      const open=prev,close=p.predicted_price;
+      const high=Math.max(open,close)+p.predicted_price*0.001;
+      const low=Math.min(open,close)-p.predicted_price*0.001;
+      ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([3,2]);
+      ctx.beginPath();ctx.moveTo(x,toY(high));ctx.lineTo(x,toY(low));ctx.stroke();
+      const top=toY(Math.max(open,close)),bot=toY(Math.min(open,close)),bh=Math.max(2,bot-top);
+      ctx.fillStyle=isUp?"rgba(0,255,157,0.25)":"rgba(255,56,96,0.25)";
+      ctx.fillRect(x-bw/2,top,bw,bh);ctx.strokeRect(x-bw/2,top,bw,bh);
+      ctx.setLineDash([]);
+      ctx.fillStyle=col;ctx.font=`10px "Share Tech Mono"`;
+      ctx.fillText(isUp?"▲":"▼",x-5,isUp?toY(high)-4:toY(low)+12);
+      prev=close;
+    });
+  }
+  // Signal levels
+  if(signal){
+    [[signal.entry,"rgba(0,212,255,0.7)","E"],[signal.stop_loss,"rgba(255,56,96,0.7)","SL"],[signal.take_profit,"rgba(0,255,157,0.7)","TP"]].forEach(([p,c,l])=>{
+      const y=toY(p);if(y<PAD.top||y>H-PAD.bottom)return;
+      ctx.setLineDash([6,4]);ctx.strokeStyle=c;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillStyle=c;ctx.font=`8px "Share Tech Mono"`;ctx.fillText(l,W-PAD.right+2,y+3);
+    });
+  }
+  // Current price line
+  const lc=candles[n-1].close,curY=toY(lc);
+  ctx.strokeStyle="rgba(0,212,255,0.3)";ctx.lineWidth=1;ctx.setLineDash([8,5]);
+  ctx.beginPath();ctx.moveTo(PAD.left,curY);ctx.lineTo(W-PAD.right,curY);ctx.stroke();
+  ctx.setLineDash([]);
+  // Time labels
+  const step=Math.max(1,Math.floor(n/5));
+  ctx.fillStyle="rgba(74,122,155,0.8)";ctx.font=`8px "Share Tech Mono"`;
+  candles.forEach((c,i)=>{if(i%step===0&&c.datetime)ctx.fillText(c.datetime.slice(11,16),toX(i)-10,H-5);});
+  // Last price display
+  const prev2=candles.length>1?candles[n-2].close:lc;
+  const chg=((lc-prev2)/prev2*100).toFixed(2);
+  document.getElementById("chartLastPrice").textContent=`Rs.${lc.toFixed(2)}`;
+  const chgEl=document.getElementById("chartLastChange");
+  chgEl.textContent=`${chg>=0?"+":""}${chg}%`;chgEl.style.color=chg>=0?"var(--up)":"var(--down)";
+}
+function drawFallback(){
+  document.getElementById("chartInfo").textContent="simulated";
+  const canvas=document.getElementById("chartCanvas"),ctx=canvas.getContext("2d");
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;
+  ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const n=60,cw=W/(n+2),bw=Math.max(1.5,cw*0.6);
+  let p=2800+Math.random()*200;const cs=[];
+  for(let i=0;i<n;i++){const o=p,mv=(Math.random()-0.47)*15,c=o+mv;cs.push({open:o,high:Math.max(o,c)+Math.random()*8,low:Math.min(o,c)-Math.random()*8,close:c});p=c;}
+  const minP=Math.min(...cs.map(c=>c.low))*0.999,maxP=Math.max(...cs.map(c=>c.high))*1.001,range=maxP-minP;
+  const toY=v=>20+(1-(v-minP)/range)*(H-50),toX=i=>(i+1)*cw+cw/2;
+  ctx.strokeStyle="rgba(13,58,92,0.5)";ctx.lineWidth=1;
+  for(let g=0;g<=4;g++){const y=20+(g/4)*(H-50);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  cs.forEach((c,i)=>{
+    const x=toX(i),isUp=c.close>=c.open,col=isUp?"#00ff9d":"#ff3860";
+    ctx.strokeStyle=col;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,toY(c.high));ctx.lineTo(x,toY(c.low));ctx.stroke();
+    const top=toY(Math.max(c.open,c.close)),bot=toY(Math.min(c.open,c.close)),bh=Math.max(1.5,bot-top);
+    ctx.fillStyle=isUp?"rgba(0,255,157,0.6)":"rgba(255,56,96,0.6)";ctx.fillRect(x-bw/2,top,bw,bh);ctx.strokeRect(x-bw/2,top,bw,bh);
+  });
+  ctx.fillStyle="rgba(255,107,53,0.6)";ctx.font=`9px "Share Tech Mono"`;
+  ctx.fillText("SIMULATED — Start API for real data",8,H-6);
+}
+function updateIndicators(candles){
+  if(!candles?.length)return;
+  const last=candles[candles.length-1];
+  document.getElementById("indicatorPanel").innerHTML=[
+    {l:"RSI 14",  v:last.rsi?last.rsi.toFixed(1):"--",    c:last.rsi>65?"var(--down)":last.rsi<35?"var(--up)":"var(--accent)"},
+    {l:"MACD",    v:last.macd?last.macd.toFixed(3):"--",   c:last.macd>0?"var(--up)":"var(--down)"},
+    {l:"EMA 9",   v:last.ema9?last.ema9.toFixed(2):"--",   c:"var(--accent)"},
+    {l:"EMA 21",  v:last.ema21?last.ema21.toFixed(2):"--", c:"var(--gold)"},
+    {l:"ATR",     v:last.atr?last.atr.toFixed(2):"--",     c:"var(--text-bright)"},
+    {l:"VWAP",    v:last.vwap?last.vwap.toFixed(2):"--",   c:"var(--accent2)"},
+    {l:"VOL",     v:last.vol_spike===1?"SPIKE":"NORMAL",    c:last.vol_spike===1?"var(--up)":"var(--text-dim)"},
+    {l:"CANDLE",  v:last.close>=last.open?"BULLISH":"BEARISH",c:last.close>=last.open?"var(--up)":"var(--down)"},
+  ].map(r=>`<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:5px;font-family:'Share Tech Mono',monospace;font-size:10px;">
+    <span style="color:var(--text-dim);">${r.l}</span>
+    <span style="color:${r.c};font-family:'Orbitron',monospace;font-weight:700;font-size:11px;">${r.v}</span>
+  </div>`).join("");
+  document.getElementById("indTF").textContent=`${TF_META[state.tf].label} · LAST`;
+}
+// ── PREDICTIONS ────────────────────────────────────────────
+async function loadPredictions(){
+  document.getElementById("predPanel").innerHTML=
+    `<div class="loading-overlay"><div class="loading-text">PREDICTING ...</div></div>`;
+  try{
+    const data=await fetch(`${API}/predict?asset=${state.asset}&tf=${state.tf}&candles=5`).then(r=>r.json());
+    state.predictions=data;
+    renderPredictions(data);
+    if(state.chartData) drawChart(state.chartData,state.signalData,data.predictions);
+  }catch{
+    document.getElementById("predPanel").innerHTML=
+      `<div class="loading-overlay"><div style="color:var(--red);font-family:'Share Tech Mono',monospace;font-size:10px;">PREDICTION FAILED</div></div>`;
+  }
+}
+function renderPredictions(data){
+  if(!data||data.error){
+    document.getElementById("predPanel").innerHTML=
+      `<div class="loading-overlay"><div style="color:var(--red);font-family:'Share Tech Mono',monospace;">${data?.error||"Error"}</div></div>`;
+    return;
+  }
+  const trendColor=data.trend==="BULLISH"?"var(--up)":data.trend==="BEARISH"?"var(--down)":"var(--gold)";
+  const rows=(data.predictions||[]).map(p=>{
+    const isUp=p.direction==="UP";
+    const sign=p.change_pts>=0?"+":"";
+    return `<div class="pred-row ${isUp?'up':'down'}">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);min-width:55px;">CANDLE +${p.candle}</span>
+      <span style="font-size:18px;color:${isUp?'var(--up)':'var(--down)'};">${isUp?'▲':'▼'}</span>
+      <span style="font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:${isUp?'var(--up)':'var(--down)'};">Rs.${p.predicted_price}</span>
+      <span style="font-size:9px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;">${p.confidence}%</span>
+      <span style="margin-left:auto;font-size:10px;color:${isUp?'var(--up)':'var(--down)'};font-family:'Share Tech Mono',monospace;">${sign}${p.change_pts}</span>
+    </div>`;
+  }).join("");
+  document.getElementById("predPanel").innerHTML=`
+    <div class="pred-grid">${rows}</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:10px;">
+      <span style="color:var(--text-dim);">TREND:</span>
+      <span style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:${trendColor};">${data.trend}</span>
+      <span style="margin-left:auto;color:var(--text-dim);">▲${data.ups} DOWN▼${data.downs} · Base Rs.${data.base_price}</span>
+    </div>`;
+  document.getElementById("predBadge").textContent=`NEXT 5 CANDLES · ${data.trend}`;
+}
+// ── PAPER TRADING ──────────────────────────────────────────
+async function loadPortfolio(){
+  try{
+    const data=await fetch(`${API}/paper/portfolio`).then(r=>r.json());
+    state.portfolio=data;
+    renderPortfolio(data);
+    document.getElementById("availCash").textContent=`Cash: Rs.${data.cash?.toLocaleString()||"--"}`;
+  }catch(e){console.log("Portfolio load error",e);}
+}
+function renderPortfolio(d){
+  if(!d)return;
+  // Stats
+  const pnlColor=d.overall_pnl>=0?"var(--up)":"var(--down)";
+  const pnlSign=d.overall_pnl>=0?"+":"";
+  document.getElementById("pfTotalVal").textContent=`Rs.${d.total_value?.toLocaleString()||"--"}`;
+  const pnlEl=document.getElementById("pfPnl");
+  pnlEl.textContent=`${pnlSign}Rs.${d.overall_pnl?.toLocaleString()||"--"}`;
+  pnlEl.style.color=pnlColor;
+  document.getElementById("pfCash").textContent=`Rs.${d.cash?.toLocaleString()||"--"}`;
+  const wrEl=document.getElementById("pfWinRate");
+  wrEl.textContent=`${d.win_rate||0}%`;
+  wrEl.style.color=d.win_rate>=60?"var(--up)":d.win_rate>=50?"var(--gold)":"var(--down)";
+  // Holdings
+  const holdings=d.holdings||[];
+  document.getElementById("holdingsCount").textContent=`${holdings.length} stocks`;
+  if(!holdings.length){
+    document.getElementById("holdingsPanel").innerHTML=
+      `<div style="padding:20px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;">No holdings yet<br>Buy a stock to start!</div>`;
+  } else {
+    document.getElementById("holdingsPanel").innerHTML=`
+      <table class="holdings-table">
+        <thead><tr><th>STOCK</th><th>QTY</th><th>AVG</th><th>CURR</th><th>P&L</th></tr></thead>
+        <tbody>${holdings.map(h=>{
+          const pc=h.unrealized_pnl>=0?"var(--up)":"var(--down)";
+          const ps=h.unrealized_pnl>=0?"+":"";
+          return `<tr>
+            <td style="color:var(--text-bright);font-weight:bold;">${h.symbol}</td>
+            <td style="color:var(--text-dim);">${h.quantity}</td>
+            <td style="color:var(--accent);">Rs.${h.avg_price}</td>
+            <td style="color:var(--accent2);">Rs.${h.current_price}</td>
+            <td style="color:${pc};">${ps}Rs.${h.unrealized_pnl}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>`;
+  }
+}
+async function loadOrders(){
+  try{
+    const data=await fetch(`${API}/paper/orders`).then(r=>r.json());
+    document.getElementById("ordersCount").textContent=`${data.count||0} orders`;
+    const orders=(data.orders||[]).reverse();
+    if(!orders.length){
+      document.getElementById("ordersPanel").innerHTML=
+        `<div style="padding:20px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;">No orders yet</div>`;
+      return;
+    }
+    document.getElementById("ordersPanel").innerHTML=`
+      <table class="scan-table">
+        <thead><tr><th>TYPE</th><th>SYMBOL</th><th>QTY</th><th>PRICE</th><th>TOTAL</th><th>P&L</th><th>TIME</th></tr></thead>
+        <tbody>${orders.map(o=>{
+          const isB=o.type==="BUY";
+          const pnlHtml=o.pnl!=null?`<span style="color:${o.pnl>=0?'var(--up)':'var(--down)'};">${o.pnl>=0?'+':''}Rs.${o.pnl}</span>`:`<span style="color:var(--text-dim);">--</span>`;
+          return `<tr>
+            <td><span class="sig-pill ${isB?'up':'dn'}">${o.type}</span></td>
+            <td style="color:var(--text-bright);font-weight:bold;">${o.symbol}</td>
+            <td style="color:var(--text-dim);">${o.quantity}</td>
+            <td style="color:var(--accent);">Rs.${o.price}</td>
+            <td style="color:var(--gold);">Rs.${o.total}</td>
+            <td>${pnlHtml}</td>
+            <td style="color:var(--text-dim);font-size:9px;">${o.timestamp?.slice(11,19)||"--"}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>`;
+  }catch(e){console.log("Orders load error",e);}
+}
+async function loadHistory(){
+  try{
+    const data=await fetch(`${API}/paper/history`).then(r=>r.json());
+    document.getElementById("histCount").textContent=`${data.total||0} trades`;
+    const history=(data.history||[]).reverse();
+    if(!history.length){
+      document.getElementById("historyList").innerHTML=
+        `<li style="padding:16px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);">No closed trades yet</li>`;
+      return;
+    }
+    document.getElementById("historyList").innerHTML=history.map(t=>{
+      const isWin=t.result==="WIN";
+      const sign=t.pnl>=0?"+":"";
+      return `<li class="history-item">
+        <span style="color:${isWin?'var(--up)':'var(--down)'};">${isWin?'✓':'✗'}</span>
+        <span style="color:var(--text-bright);font-weight:bold;min-width:75px;">${t.symbol}</span>
+        <span style="color:var(--text-dim);font-size:9px;">Buy@Rs.${t.buy_price}</span>
+        <span style="color:var(--text-dim);font-size:9px;">Sell@Rs.${t.sell_price}</span>
+        <span style="color:${isWin?'var(--up)':'var(--down)'};margin-left:auto;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;">${sign}Rs.${t.pnl}</span>
+      </li>`;
+    }).join("");
+  }catch{}
+}
+// ── BUY MODAL ──────────────────────────────────────────────
+function openBuyModal(){
+  if(!state.currentPrice){showToast("Refresh signal first","error");return;}
+  document.getElementById("modalSymbol").textContent=state.asset;
+  document.getElementById("modalPrice").textContent=`Rs.${state.currentPrice}`;
+  document.getElementById("buyPrice").value=state.currentPrice;
+  document.getElementById("buyQty").value=1;
+  if(state.signalData){
+    document.getElementById("buySL").value=state.signalData.stop_loss||"";
+    document.getElementById("buyTP").value=state.signalData.take_profit||"";
+  }
+  updateBuySummary();
+  document.getElementById("buyModal").classList.add("show");
+}
+function closeBuyModal(){document.getElementById("buyModal").classList.remove("show");}
+function updateBuySummary(){
+  const qty=parseInt(document.getElementById("buyQty").value)||0;
+  const price=parseFloat(document.getElementById("buyPrice").value)||0;
+  const total=qty*price;
+  const avail=state.portfolio?.cash||0;
+  document.getElementById("buyTotal").textContent=`Rs.${total.toFixed(2)}`;
+  document.getElementById("buyAvail").textContent=`Rs.${avail.toLocaleString()}`;
+  const after=avail-total;
+  const afterEl=document.getElementById("buyAfter");
+  afterEl.textContent=`Rs.${after.toFixed(2)}`;
+  afterEl.style.color=after>=0?"var(--accent2)":"var(--down)";
+}
+async function executeBuy(){
+  const qty=parseInt(document.getElementById("buyQty").value);
+  const price=parseFloat(document.getElementById("buyPrice").value);
+  const sl=parseFloat(document.getElementById("buySL").value)||null;
+  const tp=parseFloat(document.getElementById("buyTP").value)||null;
+  if(!qty||!price){showToast("Enter quantity and price","error");return;}
+  try{
+    const res=await fetch(`${API}/paper/buy`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({symbol:state.asset,price,quantity:qty,sl,tp,confidence:state.signalData?.confidence}),
+    }).then(r=>r.json());
+    if(res.success){
+      closeBuyModal();
+      showToast(`✓ BUY ${qty} ${state.asset} @ Rs.${price}  Total: Rs.${(qty*price).toFixed(2)}`,"success");
+      if(document.getElementById("chkTrade").checked){
+        speak(`Paper buy executed. ${qty} shares of ${state.asset} at ${price} rupees.`);
+      }
+      loadPortfolio();
+    } else {
+      showToast(res.error||"Buy failed","error");
+    }
+  }catch{showToast("API error","error");}
+}
+// ── SELL MODAL ─────────────────────────────────────────────
+function openSellModal(){
+  if(!state.portfolio){showToast("Load portfolio first","error");return;}
+  const holding=state.portfolio.holdings?.find(h=>h.symbol===state.asset);
+  if(!holding){showToast(`No ${state.asset} holdings to sell`,"error");return;}
+  document.getElementById("sellModalSymbol").textContent=state.asset;
+  document.getElementById("sellModalPrice").textContent=`Rs.${state.currentPrice}`;
+  document.getElementById("sellPrice").value=state.currentPrice;
+  document.getElementById("sellQty").value=holding.quantity;
+  document.getElementById("sellHolding").innerHTML=
+    `Holding: <span style="color:var(--accent2);">${holding.quantity} shares</span> &nbsp; Avg: <span style="color:var(--accent);">Rs.${holding.avg_price}</span>`;
+  updateSellSummary();
+  document.getElementById("sellModal").classList.add("show");
+}
+function closeSellModal(){document.getElementById("sellModal").classList.remove("show");}
+function updateSellSummary(){
+  const qty=parseInt(document.getElementById("sellQty").value)||0;
+  const price=parseFloat(document.getElementById("sellPrice").value)||0;
+  const val=qty*price;
+  document.getElementById("sellValue").textContent=`Rs.${val.toFixed(2)}`;
+  const holding=state.portfolio?.holdings?.find(h=>h.symbol===state.asset);
+  if(holding){
+    const pnl=((price-holding.avg_price)*qty).toFixed(2);
+    const pnlEl=document.getElementById("sellPnl");
+    pnlEl.textContent=`${pnl>=0?'+':''}Rs.${pnl}`;
+    pnlEl.style.color=pnl>=0?"var(--up)":"var(--down)";
+  }
+}
+async function executeSell(){
+  const qty=parseInt(document.getElementById("sellQty").value);
+  const price=parseFloat(document.getElementById("sellPrice").value);
+  if(!qty||!price){showToast("Enter quantity and price","error");return;}
+  try{
+    const res=await fetch(`${API}/paper/sell`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({symbol:state.asset,price,quantity:qty}),
+    }).then(r=>r.json());
+    if(res.success){
+      closeSellModal();
+      const pnlSign=res.pnl>=0?"+":"";
+      showToast(`✓ SELL ${qty} ${state.asset} @ Rs.${price}  P&L: ${pnlSign}Rs.${res.pnl}`,res.pnl>=0?"success":"info");
+      if(document.getElementById("chkTrade").checked){
+        const pnlText=res.pnl>=0?`profit ${res.pnl} rupees`:`loss ${Math.abs(res.pnl)} rupees`;
+        speak(`Paper sell executed. ${state.asset}. ${pnlText}.`);
+      }
+      loadPortfolio();
+      loadHistory();
+    } else {
+      showToast(res.error||"Sell failed","error");
+    }
+  }catch{showToast("API error","error");}
+}
+function confirmReset(){
+  if(confirm("Reset portfolio? All trades will be deleted. Virtual capital will reset to Rs.1,00,000.")){
+    fetch(`${API}/paper/reset`,{method:"POST"}).then(()=>{
+      loadPortfolio();
+      showToast("Portfolio reset to Rs.1,00,000","info");
+    });
+  }
+}
+// ── SCANNER ────────────────────────────────────────────────
+let scanTF="5m";
+function setScanTF(btn,tf){
+  document.querySelectorAll("#screen-scanner .tf-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");scanTF=tf;
+}
+async function runScan(){
+  document.getElementById("scanResults").innerHTML=
+    `<div class="loading-overlay"><div class="loading-text">SCANNING ALL STOCKS ...</div></div>`;
+  document.getElementById("scanTime").textContent="scanning...";
+  try{
+    const data=await fetch(`${API}/scan?tf=${scanTF}`).then(r=>r.json());
+    document.getElementById("scanTotal").textContent=data.total||"--";
+    document.getElementById("scanTradeable").textContent=data.tradeable||"--";
+    const avg=data.signals?.length?
+      (data.signals.reduce((a,s)=>a+s.confidence,0)/data.signals.length).toFixed(1)+"%" : "--";
+    document.getElementById("scanAvgConf").textContent=avg;
+    document.getElementById("scanTime").textContent=data.timestamp?.slice(12,20)||"--";
+    if(!data.signals?.length){
+      document.getElementById("scanResults").innerHTML=
+        `<div class="loading-overlay"><div class="loading-text">NO SIGNALS FOUND</div></div>`;
+      return;
+    }
+    document.getElementById("scanResults").innerHTML=`
+      <table class="scan-table">
+        <thead><tr><th>SYMBOL</th><th>DIR</th><th>ENTRY</th><th>SL</th><th>TARGET</th><th>CONF</th><th>R:R</th><th>ACTION</th></tr></thead>
+        <tbody>${data.signals.map(s=>{
+          const isUp=s.direction==="UP";
+          return `<tr onclick="selectAsset(null,'${s.symbol}');showScreen('signals',document.querySelector('.nav-btn'))">
+            <td style="color:var(--text-bright);font-weight:bold;">${s.symbol}</td>
+            <td><span class="sig-pill ${isUp?'up':'dn'}">${s.direction}</span></td>
+            <td style="color:var(--accent);">Rs.${s.entry}</td>
+            <td style="color:var(--down);">Rs.${s.stop_loss}</td>
+            <td style="color:var(--up);">Rs.${s.take_profit}</td>
+            <td style="color:${s.confidence>=65?'var(--up)':s.confidence>=60?'var(--gold)':'var(--down)'};">${s.confidence}%</td>
+            <td style="color:var(--text-dim);">1:${s.rr_ratio}</td>
+            <td><button onclick="event.stopPropagation();quickTrade('${s.symbol}',${s.entry},'${s.direction}')"
+              style="padding:3px 8px;font-size:8px;background:${isUp?'rgba(0,255,157,0.1)':'rgba(255,56,96,0.1)'};color:${isUp?'var(--up)':'var(--down)'};border:1px solid ${isUp?'var(--up)':'var(--down)'};font-family:'Orbitron',monospace;cursor:pointer;">
+              TRADE
+            </button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+      <div style="padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);">Click row to see signal detail · Click TRADE to quick trade</div>`;
+  }catch{
+    document.getElementById("scanResults").innerHTML=
+      `<div class="loading-overlay"><div style="color:var(--red);font-family:'Share Tech Mono',monospace;font-size:10px;">SCAN FAILED</div></div>`;
+  }
+}
+function quickTrade(symbol,price,direction){
+  state.asset=symbol;state.currentPrice=price;
+  document.querySelectorAll(".asset-tab").forEach(b=>b.classList.remove("active"));
+  if(direction==="UP") openBuyModal();
+  else openSellModal();
+}
+// ── TF + ASSET ─────────────────────────────────────────────
+function switchTF(btn,tf){
+  document.querySelectorAll(".tf-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  state.tf=tf;state.countdown=Math.round(TF_META[tf].seconds*0.8);
+  document.getElementById("signalTFBadge").textContent=TF_META[tf].badge;
+  document.getElementById("timerTF").textContent=TF_META[tf].label;
+  document.getElementById("cdTotal").textContent=`/ ${TF_META[tf].maxCandles} TODAY`;
+  refreshSignal();
+}
+function selectAsset(btn,asset){
+  if(btn){document.querySelectorAll(".asset-tab").forEach(b=>b.classList.remove("active"));btn.classList.add("active");}
+  state.asset=asset;
+  document.getElementById("tradeSymbol").textContent=asset;
+  document.getElementById("chartTitle").textContent=`${asset} — ${TF_META[state.tf].label} CHART`;
+  refreshSignal();
+}
+function setChartLen(btn,n){
+  document.querySelectorAll(".asset-tab").forEach(b=>{
+    if(["30","60","100"].includes(b.textContent.trim()))b.classList.remove("active");
+  });
+  btn.classList.add("active");state.chartLen=n;loadChart();
+}
+// ── COUNTDOWN ──────────────────────────────────────────────
+function startCountdown(){
+  setInterval(()=>{
+    state.countdown--;
+    if(state.countdown<=0){state.countdown=TF_META[state.tf].seconds;state.candlesDone++;refreshAll();}
+    const m=Math.floor(state.countdown/60),s=state.countdown%60;
+    const pct=Math.round((1-state.countdown/TF_META[state.tf].seconds)*100);
+    const el=document.getElementById("cdDisplay");
+    el.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    el.className="countdown-main"+(state.countdown<=10?" urgent":"");
+    document.getElementById("cpFill").style.width=pct+"%";
+    document.getElementById("cpPct").textContent=pct+"% elapsed";
+    document.getElementById("cdCount").textContent=state.candlesDone;
+  },1000);
+}
+window.addEventListener("resize",()=>{
+  if(state.chartData)drawChart(state.chartData,state.signalData,state.predictions?.predictions);
+  else drawFallback();
+});
+// ── INIT ───────────────────────────────────────────────────
+async function init(){
+  startClock();startCountdown();
+  await checkHealth();setInterval(checkHealth,15000);
+  await refreshSignal();
+  await loadChart();
+  loadPortfolio();
+  loadHistory();
+  setInterval(()=>{loadPortfolio();loadHistory();},60000);
+}
+init();
+</script>
+</body>
+</html>
