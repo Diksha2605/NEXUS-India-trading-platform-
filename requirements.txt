@@ -1,0 +1,37 @@
+# ============================================================
+#  NXIO — requirements.txt
+#  Pinned production dependencies
+#  Install: pip install -r requirements.txt
+# ============================================================
+
+# Web Framework
+fastapi==0.111.0
+uvicorn==0.30.1
+
+# ML / Deep Learning
+# tensorflow==2.16.1  # install separately when retraining: pip install tensorflow==2.16.1
+numpy==1.26.4
+scikit-learn==1.5.0
+shap==0.45.1
+
+# Data
+pandas==2.2.2
+yfinance==0.2.38
+
+# Settings & Validation
+pydantic==2.7.4
+pydantic-settings==2.3.4
+pydantic_core==2.18.4
+python-dotenv==1.0.1
+annotated-types==0.7.0
+typing_extensions==4.12.2
+
+# Visualization (dashboard)
+plotly==5.22.0
+seaborn==0.13.2
+matplotlib==3.9.0
+streamlit==1.35.0
+
+# Utilities
+colorama==0.4.6
+requests==2.32.3

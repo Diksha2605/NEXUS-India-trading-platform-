@@ -1,248 +1,253 @@
 ﻿# ============================================================
-#  NEXUS INDIA — paper_trading/portfolio.py
-#  Virtual Paper Trading Engine
+#  NXIO — paper_trading/portfolio.py
+#  Virtual Paper Trading Engine — SQLite Backend
 #  Starting Capital: Rs.1,00,000
 # ============================================================
-import os, sys, json
+import os, sys
 from datetime import datetime
 from colorama import Fore, Style, init
 init(autoreset=True)
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# ── Storage ───────────────────────────────────────────────
-DATA_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-PORT_FILE = os.path.join(DATA_DIR, "portfolio.json")
-ORD_FILE  = os.path.join(DATA_DIR, "orders.json")
-HIST_FILE = os.path.join(DATA_DIR, "trade_history.json")
-STARTING_CAPITAL = 100000  # Rs.1,00,000
+
+from paper_trading.database import (
+    init_db,
+    db_load_portfolio, db_save_portfolio,
+    db_load_holdings, db_upsert_holding, db_delete_holding,
+    db_load_orders, db_insert_order, db_idempotency_check,
+    db_load_history, db_insert_history,
+    db_reset,
+    STARTING_CAPITAL,
+)
+
+# Init DB schema on import (safe — only creates tables if missing)
+init_db()
+
+
 def log(msg, level="INFO"):
-    colors = {"INFO":Fore.CYAN,"OK":Fore.GREEN,"WARN":Fore.YELLOW,"ERR":Fore.RED}
+    colors = {"INFO": Fore.CYAN, "OK": Fore.GREEN, "WARN": Fore.YELLOW, "ERR": Fore.RED}
     ts = datetime.now().strftime("%H:%M:%S")
-    print(f"{Fore.WHITE}[{ts}] {colors.get(level,Fore.WHITE)}[{level}]{Style.RESET_ALL} {msg}")
-# ── Load / Save ───────────────────────────────────────────
-def load_portfolio():
-    if os.path.exists(PORT_FILE):
-        with open(PORT_FILE, "r") as f:
-            return json.load(f)
-    return {
-        "cash":          STARTING_CAPITAL,
-        "starting":      STARTING_CAPITAL,
-        "holdings":      {},
-        "created":       datetime.now().strftime("%d %b %Y"),
-        "total_trades":  0,
-        "winning_trades":0,
-        "losing_trades": 0,
-    }
-def save_portfolio(portfolio):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(PORT_FILE, "w") as f:
-        json.dump(portfolio, f, indent=2)
-def load_orders():
-    if os.path.exists(ORD_FILE):
-        with open(ORD_FILE, "r") as f:
-            return json.load(f)
-    return []
-def save_orders(orders):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(ORD_FILE, "w") as f:
-        json.dump(orders, f, indent=2)
-def load_history():
-    if os.path.exists(HIST_FILE):
-        with open(HIST_FILE, "r") as f:
-            return json.load(f)
-    return []
-def save_history(history):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(HIST_FILE, "w") as f:
-        json.dump(history, f, indent=2)
+    print(f"{Fore.WHITE}[{ts}] {colors.get(level, Fore.WHITE)}[{level}]{Style.RESET_ALL} {msg}")
+
+
+# ── Public helpers (server.py uses these directly) ────────
+def load_orders() -> list:
+    return db_load_orders()
+
+
+def load_history() -> list:
+    return db_load_history()
+
+
 # ── Core Trading Functions ────────────────────────────────
-def buy_stock(symbol, price, quantity, signal_conf=None, sl=None, tp=None):
+def buy_stock(symbol, price, quantity, signal_conf=None, sl=None, tp=None,
+              idempotency_key=None):
     """
     Place a paper BUY order.
     Returns: dict with result
     """
-    portfolio = load_portfolio()
-    orders    = load_orders()
+    # Idempotency check — return existing order if key already used
+    if idempotency_key:
+        existing = db_idempotency_check(idempotency_key)
+        if existing:
+            log(f"Duplicate BUY ignored (idempotency_key={idempotency_key})", "WARN")
+            return {"success": True, "duplicate": True, "order": existing}
+
+    portfolio = db_load_portfolio()
+    holdings  = db_load_holdings()
+
     total_cost = round(price * quantity, 2)
+
     # Check funds
     if total_cost > portfolio["cash"]:
         return {
             "success": False,
             "error":   f"Insufficient funds. Need Rs.{total_cost}, have Rs.{portfolio['cash']}",
         }
+
     # Deduct cash
-    portfolio["cash"] = round(portfolio["cash"] - total_cost, 2)
-    # Add to holdings
-    if symbol in portfolio["holdings"]:
-        # Average out existing position
-        existing = portfolio["holdings"][symbol]
-        total_qty = existing["quantity"] + quantity
-        avg_price = round(
-            (existing["avg_price"] * existing["quantity"] + price * quantity) / total_qty, 2
+    new_cash = round(portfolio["cash"] - total_cost, 2)
+
+    # Update holdings (average-in if already holding)
+    if symbol in holdings:
+        existing_h  = holdings[symbol]
+        total_qty   = existing_h["quantity"] + quantity
+        avg_price   = round(
+            (existing_h["avg_price"] * existing_h["quantity"] + price * quantity) / total_qty, 2
         )
-        portfolio["holdings"][symbol] = {
-            "quantity":  total_qty,
-            "avg_price": avg_price,
-            "invested":  round(avg_price * total_qty, 2),
-            "sl":        sl or existing.get("sl"),
-            "tp":        tp or existing.get("tp"),
-        }
+        invested    = round(avg_price * total_qty, 2)
+        final_sl    = sl or existing_h.get("sl")
+        final_tp    = tp or existing_h.get("tp")
     else:
-        portfolio["holdings"][symbol] = {
-            "quantity":  quantity,
-            "avg_price": price,
-            "invested":  total_cost,
-            "sl":        sl,
-            "tp":        tp,
-        }
-    portfolio["total_trades"] += 1
-    # Save order
-    order = {
-        "id":          len(orders) + 1,
-        "type":        "BUY",
-        "symbol":      symbol,
-        "price":       price,
-        "quantity":    quantity,
-        "total":       total_cost,
-        "sl":          sl,
-        "tp":          tp,
-        "confidence":  signal_conf,
-        "status":      "EXECUTED",
-        "timestamp":   datetime.now().strftime("%d %b %Y %H:%M:%S"),
-    }
-    orders.append(order)
-    save_portfolio(portfolio)
-    save_orders(orders)
+        total_qty = quantity
+        avg_price = price
+        invested  = total_cost
+        final_sl  = sl
+        final_tp  = tp
+
+    db_upsert_holding(symbol, total_qty, avg_price, invested, final_sl, final_tp)
+    db_save_portfolio(
+        cash           = new_cash,
+        total_trades   = portfolio["total_trades"] + 1,
+        winning_trades = portfolio["winning_trades"],
+        losing_trades  = portfolio["losing_trades"],
+    )
+
+    ts    = datetime.now().strftime("%d %b %Y %H:%M:%S")
+    order_id = db_insert_order(
+        type_="BUY", symbol=symbol, price=price, quantity=quantity,
+        total=total_cost, sl=sl, tp=tp, confidence=signal_conf,
+        pnl=None, pnl_pct=None, status="EXECUTED",
+        idempotency_key=idempotency_key, timestamp=ts,
+    )
+
     log(f"BUY {symbol} | Qty:{quantity} | Price:Rs.{price} | Total:Rs.{total_cost}", "OK")
-    return {"success": True, "order": order, "portfolio": portfolio}
+
+    order = {
+        "id": order_id, "type": "BUY", "symbol": symbol,
+        "price": price, "quantity": quantity, "total": total_cost,
+        "sl": sl, "tp": tp, "confidence": signal_conf,
+        "status": "EXECUTED", "timestamp": ts,
+    }
+    return {"success": True, "order": order, "cash_remaining": new_cash}
+
+
 def sell_stock(symbol, price, quantity):
     """
     Place a paper SELL order.
     Returns: dict with result
     """
-    portfolio = load_portfolio()
-    orders    = load_orders()
-    history   = load_history()
-    if symbol not in portfolio["holdings"]:
+    portfolio = db_load_portfolio()
+    holdings  = db_load_holdings()
+
+    if symbol not in holdings:
         return {"success": False, "error": f"{symbol} not in holdings"}
-    holding = portfolio["holdings"][symbol]
+
+    holding = holdings[symbol]
     if quantity > holding["quantity"]:
         return {
             "success": False,
             "error":   f"Only {holding['quantity']} shares available, can't sell {quantity}",
         }
+
     avg_price   = holding["avg_price"]
     total_value = round(price * quantity, 2)
     pnl         = round((price - avg_price) * quantity, 2)
     pnl_pct     = round((price - avg_price) / avg_price * 100, 2)
+
     # Update cash
-    portfolio["cash"] = round(portfolio["cash"] + total_value, 2)
-    # Update holdings
-    if quantity == holding["quantity"]:
-        del portfolio["holdings"][symbol]
+    new_cash = round(portfolio["cash"] + total_value, 2)
+
+    # Update or remove holding
+    remaining_qty = holding["quantity"] - quantity
+    if remaining_qty == 0:
+        db_delete_holding(symbol)
     else:
-        portfolio["holdings"][symbol]["quantity"] -= quantity
-        portfolio["holdings"][symbol]["invested"]  = round(
-            portfolio["holdings"][symbol]["avg_price"] *
-            portfolio["holdings"][symbol]["quantity"], 2
-        )
-    # Track wins/losses
-    if pnl >= 0:
-        portfolio["winning_trades"] += 1
-    else:
-        portfolio["losing_trades"] += 1
-    # Save to history
-    trade = {
-        "type":      "SELL",
-        "symbol":    symbol,
-        "buy_price": avg_price,
-        "sell_price":price,
-        "quantity":  quantity,
-        "pnl":       pnl,
-        "pnl_pct":   pnl_pct,
-        "result":    "WIN" if pnl >= 0 else "LOSS",
-        "timestamp": datetime.now().strftime("%d %b %Y %H:%M:%S"),
-    }
-    history.append(trade)
-    order = {
-        "id":        len(orders) + 1,
-        "type":      "SELL",
-        "symbol":    symbol,
-        "price":     price,
-        "quantity":  quantity,
-        "total":     total_value,
-        "pnl":       pnl,
-        "pnl_pct":   pnl_pct,
-        "status":    "EXECUTED",
-        "timestamp": datetime.now().strftime("%d %b %Y %H:%M:%S"),
-    }
-    orders.append(order)
-    save_portfolio(portfolio)
-    save_orders(orders)
-    save_history(history)
+        new_invested = round(avg_price * remaining_qty, 2)
+        db_upsert_holding(symbol, remaining_qty, avg_price, new_invested,
+                          holding.get("sl"), holding.get("tp"))
+
+    # Track wins / losses
+    won = pnl >= 0
+    db_save_portfolio(
+        cash           = new_cash,
+        total_trades   = portfolio["total_trades"],
+        winning_trades = portfolio["winning_trades"] + (1 if won else 0),
+        losing_trades  = portfolio["losing_trades"]  + (0 if won else 1),
+    )
+
+    ts = datetime.now().strftime("%d %b %Y %H:%M:%S")
+
+    db_insert_history(
+        symbol=symbol, buy_price=avg_price, sell_price=price,
+        quantity=quantity, pnl=pnl, pnl_pct=pnl_pct,
+        result="WIN" if won else "LOSS", timestamp=ts,
+    )
+
+    order_id = db_insert_order(
+        type_="SELL", symbol=symbol, price=price, quantity=quantity,
+        total=total_value, sl=None, tp=None, confidence=None,
+        pnl=pnl, pnl_pct=pnl_pct, status="EXECUTED",
+        idempotency_key=None, timestamp=ts,
+    )
+
     log(f"SELL {symbol} | Qty:{quantity} | Price:Rs.{price} | P&L:Rs.{pnl} ({pnl_pct}%)", "OK")
+
+    order = {
+        "id": order_id, "type": "SELL", "symbol": symbol,
+        "price": price, "quantity": quantity, "total": total_value,
+        "pnl": pnl, "pnl_pct": pnl_pct,
+        "status": "EXECUTED", "timestamp": ts,
+    }
     return {"success": True, "order": order, "pnl": pnl, "pnl_pct": pnl_pct}
+
+
 def get_portfolio_summary(current_prices=None):
-    """
-    Get full portfolio summary with live P&L.
-    current_prices: dict of {symbol: price}
-    """
-    portfolio = load_portfolio()
-    history   = load_history()
-    holdings_value = 0
+    """Get full portfolio summary with live P&L."""
+    portfolio = db_load_portfolio()
+    holdings  = db_load_holdings()
+    history   = db_load_history()
+
+    holdings_value  = 0
     holdings_detail = []
-    for symbol, holding in portfolio["holdings"].items():
+
+    for symbol, holding in holdings.items():
         qty       = holding["quantity"]
         avg_price = holding["avg_price"]
         invested  = holding["invested"]
-        # Use current price if available
+
         curr_price = avg_price
         if current_prices and symbol in current_prices:
             curr_price = current_prices[symbol]
-        curr_value  = round(curr_price * qty, 2)
-        unrealized  = round(curr_value - invested, 2)
+
+        curr_value     = round(curr_price * qty, 2)
+        unrealized     = round(curr_value - invested, 2)
         unrealized_pct = round((unrealized / invested) * 100, 2) if invested else 0
         holdings_value += curr_value
+
         holdings_detail.append({
-            "symbol":          symbol,
-            "quantity":        qty,
-            "avg_price":       avg_price,
-            "current_price":   curr_price,
-            "invested":        invested,
-            "current_value":   curr_value,
-            "unrealized_pnl":  unrealized,
-            "unrealized_pct":  unrealized_pct,
-            "sl":              holding.get("sl"),
-            "tp":              holding.get("tp"),
+            "symbol":         symbol,
+            "quantity":       qty,
+            "avg_price":      avg_price,
+            "current_price":  curr_price,
+            "invested":       invested,
+            "current_value":  curr_value,
+            "unrealized_pnl": unrealized,
+            "unrealized_pct": unrealized_pct,
+            "sl":             holding.get("sl"),
+            "tp":             holding.get("tp"),
         })
-    total_value    = round(portfolio["cash"] + holdings_value, 2)
-    total_invested = STARTING_CAPITAL
-    overall_pnl    = round(total_value - total_invested, 2)
-    overall_pnl_pct= round((overall_pnl / total_invested) * 100, 2)
-    # Realized P&L from history
-    realized_pnl = sum(t["pnl"] for t in history)
-    # Win rate
+
+    total_value     = round(portfolio["cash"] + holdings_value, 2)
+    overall_pnl     = round(total_value - STARTING_CAPITAL, 2)
+    overall_pnl_pct = round((overall_pnl / STARTING_CAPITAL) * 100, 2)
+    realized_pnl    = sum(t["pnl"] for t in history)
+
     total_closed = portfolio["winning_trades"] + portfolio["losing_trades"]
-    win_rate = round(portfolio["winning_trades"] / total_closed * 100, 1) if total_closed > 0 else 0
+    win_rate = round(portfolio["winning_trades"] / total_closed * 100, 1) if total_closed else 0
+
     return {
-        "cash":              portfolio["cash"],
-        "starting_capital":  STARTING_CAPITAL,
-        "holdings_value":    round(holdings_value, 2),
-        "total_value":       total_value,
-        "overall_pnl":       overall_pnl,
-        "overall_pnl_pct":   overall_pnl_pct,
-        "realized_pnl":      round(realized_pnl, 2),
-        "unrealized_pnl":    round(holdings_value - sum(h["invested"] for h in holdings_detail), 2),
-        "holdings":          holdings_detail,
-        "total_trades":      portfolio["total_trades"],
-        "winning_trades":    portfolio["winning_trades"],
-        "losing_trades":     portfolio["losing_trades"],
-        "win_rate":          win_rate,
-        "created":           portfolio.get("created", ""),
+        "cash":             portfolio["cash"],
+        "starting_capital": STARTING_CAPITAL,
+        "holdings_value":   round(holdings_value, 2),
+        "total_value":      total_value,
+        "overall_pnl":      overall_pnl,
+        "overall_pnl_pct":  overall_pnl_pct,
+        "realized_pnl":     round(realized_pnl, 2),
+        "unrealized_pnl":   round(
+            holdings_value - sum(h["invested"] for h in holdings_detail), 2
+        ),
+        "holdings":         holdings_detail,
+        "total_trades":     portfolio["total_trades"],
+        "winning_trades":   portfolio["winning_trades"],
+        "losing_trades":    portfolio["losing_trades"],
+        "win_rate":         win_rate,
+        "created":          portfolio.get("created", ""),
     }
+
+
 def reset_portfolio():
     """Reset portfolio to starting state."""
-    if os.path.exists(PORT_FILE): os.remove(PORT_FILE)
-    if os.path.exists(ORD_FILE):  os.remove(ORD_FILE)
-    if os.path.exists(HIST_FILE): os.remove(HIST_FILE)
+    db_reset()
     log("Portfolio reset to Rs.1,00,000", "OK")
     return {"success": True, "message": "Portfolio reset", "cash": STARTING_CAPITAL}
