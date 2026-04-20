@@ -1,14 +1,16 @@
 ﻿# ============================================================
 #  NXIO — api/server.py
-#  FastAPI Backend — Secured + Validated (Pydantic V2)
+#  FastAPI Backend — Secured + Validated + Monitored
 # ============================================================
-import os, sys
+import os, sys, shutil, logging
 import pandas as pd
 from datetime import datetime
 from fastapi import FastAPI, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator, model_validator
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import NSE_SYMBOLS, TIMEFRAMES, MIN_CONFIDENCE, PROC_DIR
 from signals.generator import generate_signal, scan_all
 from brain.predictor import predict_next_candles
@@ -16,11 +18,19 @@ from paper_trading.portfolio import (
     buy_stock, sell_stock, get_portfolio_summary,
     load_orders, load_history, reset_portfolio
 )
+from paper_trading.database import DB_PATH
 from api.settings import settings
 from api.auth import verify_api_key
+from api.logging_config import setup_logging, RequestIDMiddleware
+
+# ── Logging setup ─────────────────────────────────────────
+setup_logging(settings.log_level)
+logger = logging.getLogger("nxio.server")
 
 app = FastAPI(title="NXIO API", version="3.0.0")
 
+# ── Middlewares ───────────────────────────────────────────
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.allowed_origin],
@@ -30,7 +40,6 @@ app.add_middleware(
 
 
 def require_paper_mode():
-    """Hard block — prevents accidental real-money trading."""
     if settings.nxio_env not in ("paper", "development"):
         from fastapi import HTTPException
         raise HTTPException(
@@ -39,11 +48,11 @@ def require_paper_mode():
         )
 
 
-# ── Request Models (Pydantic V2) ──────────────────────────
+# ── Request Models ────────────────────────────────────────
 class BuyRequest(BaseModel):
-    symbol:          str         = Field(..., min_length=1, max_length=20)
-    price:           float       = Field(..., gt=0, le=1_000_000)
-    quantity:        int         = Field(..., gt=0, le=10_000)
+    symbol:          str          = Field(..., min_length=1, max_length=20)
+    price:           float        = Field(..., gt=0, le=1_000_000)
+    quantity:        int          = Field(..., gt=0, le=10_000)
     sl:              float | None = Field(None, gt=0)
     tp:              float | None = Field(None, gt=0)
     confidence:      float | None = Field(None, ge=0, le=100)
@@ -72,20 +81,55 @@ class SellRequest(BaseModel):
         return v.upper().strip()
 
 
-# ── Existing Endpoints ────────────────────────────────────
+# ── Enhanced Health Check ─────────────────────────────────
 @app.get("/health")
 def health():
+    checks = {}
+
+    # DB check
+    try:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("SELECT 1")
+        conn.close()
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+
+    # Model files check
+    models_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "brain", "models"
+    )
+    model_files = []
+    if os.path.exists(models_dir):
+        model_files = [f for f in os.listdir(models_dir) if f.endswith(".keras") or f.endswith(".h5")]
+    checks["models"] = f"{len(model_files)} loaded" if model_files else "no models found"
+
+    # Disk space check
+    try:
+        usage    = shutil.disk_usage("/")
+        free_gb  = round(usage.free / (1024 ** 3), 1)
+        checks["disk_free_gb"] = free_gb
+        checks["disk"]         = "ok" if free_gb > 1.0 else "warning: low disk space"
+    except Exception:
+        checks["disk"] = "unknown"
+
+    overall = "online" if checks["database"] == "ok" else "degraded"
+
     return {
-        "status":     "online",
+        "status":     overall,
         "system":     "NXIO",
         "version":    "3.0.0",
         "timestamp":  datetime.now().strftime("%d %b %Y %H:%M:%S"),
         "env":        settings.nxio_env,
+        "checks":     checks,
         "symbols":    list(NSE_SYMBOLS.keys()),
         "timeframes": list(TIMEFRAMES.keys()),
     }
 
 
+# ── Signal Endpoints ──────────────────────────────────────
 @app.get("/signal")
 def get_signal(asset: str = Query(default="RELIANCE"), tf: str = Query(default="5m")):
     asset = asset.upper()
@@ -106,11 +150,11 @@ def get_scan(tf: str = Query(default="5m")):
     signals   = scan_all(timeframe=tf)
     tradeable = [s for s in signals if s.get("valid")]
     return {
-        "timeframe":  tf,
-        "timestamp":  datetime.now().strftime("%d %b %Y %H:%M:%S"),
-        "total":      len(signals),
-        "tradeable":  len(tradeable),
-        "signals":    signals,
+        "timeframe": tf,
+        "timestamp": datetime.now().strftime("%d %b %Y %H:%M:%S"),
+        "total":     len(signals),
+        "tradeable": len(tradeable),
+        "signals":   signals,
     }
 
 
@@ -169,29 +213,25 @@ def get_predict(
     downs = candles - ups
     trend = "BULLISH" if ups > downs else "BEARISH" if downs > ups else "NEUTRAL"
     return {
-        "asset":      asset,
-        "timeframe":  tf,
-        "timestamp":  datetime.now().strftime("%d %b %Y %H:%M:%S"),
-        "base_price": preds[0]["from_price"],
-        "n_candles":  candles,
-        "trend":      trend,
-        "ups":        ups,
-        "downs":      downs,
+        "asset":       asset,
+        "timeframe":   tf,
+        "timestamp":   datetime.now().strftime("%d %b %Y %H:%M:%S"),
+        "base_price":  preds[0]["from_price"],
+        "n_candles":   candles,
+        "trend":       trend,
+        "ups":         ups,
+        "downs":       downs,
         "predictions": preds,
     }
 
 
-# ── Paper Trading Endpoints (auth required) ───────────────
+# ── Paper Trading Endpoints ───────────────────────────────
 @app.post("/paper/buy", dependencies=[Depends(verify_api_key)])
 def paper_buy(req: BuyRequest):
     require_paper_mode()
     return buy_stock(
-        symbol=req.symbol,
-        price=req.price,
-        quantity=req.quantity,
-        signal_conf=req.confidence,
-        sl=req.sl,
-        tp=req.tp,
+        symbol=req.symbol, price=req.price, quantity=req.quantity,
+        signal_conf=req.confidence, sl=req.sl, tp=req.tp,
         idempotency_key=req.idempotency_key,
     )
 
