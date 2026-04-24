@@ -1,0 +1,129 @@
+{
+  "generated": "24 Apr 2026 11:34:16",
+  "platform": "NXIO v3.0.0",
+  "compliance": "SEBI Algo-ID April 2026 Mandate",
+  "models": [
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "5m",
+      "model_file": "lstm_reliance_5m.h5",
+      "scaler_file": "scaler_reliance_5m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 495.8,
+      "model_modified": "20 Apr 2026 17:18",
+      "model_md5": "b6fc4f283efdca5760a262f8cd6524f0",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "15m",
+      "model_file": "lstm_reliance_15m.h5",
+      "scaler_file": "scaler_reliance_15m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "20 Apr 2026 17:19",
+      "model_md5": "a735c7d520cd4c6973cb2d0483e25da0",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "1h",
+      "model_file": "lstm_reliance_1h.h5",
+      "scaler_file": "scaler_reliance_1h.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "20 Apr 2026 17:22",
+      "model_md5": "133788aad16ca545136f92b5a449a675",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "5m",
+      "model_file": "lstm_tcs_5m.h5",
+      "scaler_file": "scaler_tcs_5m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "20a16bc1b587b47e222dd3f993d9c8a3",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "15m",
+      "model_file": "lstm_tcs_15m.h5",
+      "scaler_file": "scaler_tcs_15m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "25d50a88bcf51969a6ad4821f7e6e6a6",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "1h",
+      "model_file": "lstm_tcs_1h.h5",
+      "scaler_file": "scaler_tcs_1h.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "f9bde6cf7bd89e7956bff98151d46a66",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "5m",
+      "model_file": "lstm_hdfcbank_5m.h5",
+      "scaler_file": "scaler_hdfcbank_5m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "ac5632027bce81fcf31e99500716c4a0",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "15m",
+      "model_file": "lstm_hdfcbank_15m.h5",
+      "scaler_file": "scaler_hdfcbank_15m.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "8a6cc91676d714dad689a20a0bbf926f",
+      "scaler_size_kb": 2.4
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "1h",
+      "model_file": "lstm_hdfcbank_1h.h5",
+      "scaler_file": "scaler_hdfcbank_1h.npz",
+      "model_exists": true,
+      "scaler_exists": true,
+      "status": "ready",
+      "model_size_kb": 498.6,
+      "model_modified": "06 Apr 2026 16:09",
+      "model_md5": "25d294a8c29b68a434b16170cfc57e9a",
+      "scaler_size_kb": 2.4
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "ready": 9,
+    "missing": 0
+  }
+}
