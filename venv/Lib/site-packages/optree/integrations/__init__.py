@@ -1,4 +1,4 @@
-# Copyright 2022-2025 MetaOPT Team. All Rights Reserved.
+# Copyright 2022-2026 MetaOPT Team. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from optree.integrations import jax, numpy, torch
+    from optree.integrations import attrs, jax, numpy, torch
 
 
-SUBMODULES: frozenset[str] = frozenset({'jax', 'numpy', 'torch'})
+SUBMODULES: frozenset[str] = frozenset({'attrs', 'jax', 'numpy', 'torch'})
 
 
 def __dir__() -> list[str]:

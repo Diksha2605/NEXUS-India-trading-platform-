@@ -1,0 +1,73 @@
+{
+  "generated": "28 May 2026 22:47:06",
+  "platform": "NXIO v3.0.0",
+  "compliance": "SEBI Algo-ID April 2026 Mandate",
+  "results": [
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 22:47:06",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 22:47:21",
+      "status": "skipped",
+      "note": "TensorFlow not installed \u2014 pip install tensorflow==2.16.1"
+    }
+  ],
+  "summary": {
+    "note": "TensorFlow not installed \u2014 models not evaluated"
+  }
+}

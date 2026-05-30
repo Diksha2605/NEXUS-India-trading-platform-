@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2019-2024 Intel Corporation
+* Copyright 2019-2023 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -24,15 +24,6 @@
 #include "type_helpers.hpp"
 
 #include "utils.hpp"
-
-#define VDISPATCH_CONCAT(cond, msg, ...) \
-    VCONDCHECK(primitive, create, dispatch, concat, (cond), \
-            status::unimplemented, "%s," msg, this->info(engine), \
-            ##__VA_ARGS__)
-
-#define VDISPATCH_CONCAT_SC(f, msg, ...) \
-    VCHECK(primitive, create, dispatch, concat, (f), "%s," msg, \
-            this->info(engine), ##__VA_ARGS__)
 
 namespace dnnl {
 namespace impl {
@@ -268,10 +259,9 @@ private:
 };
 
 #define DECLARE_CONCAT_PD_t(impl_name, ...) \
-    static status_t create(concat_pd_t **concat_pd, \
-            dnnl::impl::engine_t *engine, const primitive_attr_t *attr, \
-            const memory_desc_t *dst_md, int n, int concat_dim, \
-            const memory_desc_t *const *src_mds) { \
+    static status_t create(concat_pd_t **concat_pd, engine_t *engine, \
+            const primitive_attr_t *attr, const memory_desc_t *dst_md, int n, \
+            int concat_dim, const memory_desc_t *const *src_mds) { \
         using namespace status; \
         auto _pd = make_unique_pd<pd_t>(attr, dst_md, n, concat_dim, src_mds); \
         if (_pd == nullptr) return out_of_memory; \
@@ -280,10 +270,8 @@ private:
         return safe_ptr_assign(*concat_pd, _pd.release()); \
     } \
     status_t create_primitive( \
-            std::pair<std::shared_ptr<impl::primitive_t>, cache_state_t> \
-                    &primitive, \
-            dnnl::impl::engine_t *engine, const cache_blob_t &cache_blob) \
-            const override { \
+            std::pair<std::shared_ptr<primitive_t>, bool> &primitive, \
+            engine_t *engine, const cache_blob_t &cache_blob) const override { \
         return primitive_t::create_primitive_common<__VA_ARGS__, pd_t>( \
                 primitive, this, engine, false, cache_blob); \
     } \

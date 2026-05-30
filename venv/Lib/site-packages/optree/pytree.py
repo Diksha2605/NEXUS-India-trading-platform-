@@ -1,4 +1,4 @@
-# Copyright 2022-2025 MetaOPT Team. All Rights Reserved.
+# Copyright 2022-2026 MetaOPT Team. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -317,17 +317,16 @@ else:
                 b: float
 
             # User code
-            In [1]: import foo
+            import foo
 
-            In [2]: foo.pytree.flatten({'a': 1, 'b': 2, 'c': foo.bar.Bar(3, 4.0)}))
-            Out[2]:
-            (
-                [1, 2, 3, 4.0],
-                PyTreeSpec({'a': *, 'b': *, 'c': CustomTreeNode(Bar[()], [*, *])}, namespace='foo')
-            )
+            foo.pytree.flatten({'a': 1, 'b': 2, 'c': foo.bar.Bar(3, 4.0)})
+            # (
+            #     [1, 2, 3, 4.0],
+            #     PyTreeSpec({'a': *, 'b': *, 'c': CustomTreeNode(Bar[()], [*, *])}, namespace='foo')
+            # )
 
-            In [3]: foo.pytree.functools.reduce(lambda x, y: x * y, {'a': 1, 'b': 2, 'c': foo.bar.Bar(3, 4.0)}))
-            Out[3]: 24.0
+            foo.pytree.functools.reduce(lambda x, y: x * y, {'a': 1, 'b': 2, 'c': foo.bar.Bar(3, 4.0)})
+            # 24.0
 
         .. versionadded:: 0.16.0
 

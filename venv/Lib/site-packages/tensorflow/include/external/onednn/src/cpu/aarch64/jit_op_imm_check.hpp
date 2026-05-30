@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2020-2024 FUJITSU LIMITED
+* Copyright 2020-2021 FUJITSU LIMITED
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 #ifndef JIT_OP_IMM_CHECK_HPP
 #define JIT_OP_IMM_CHECK_HPP
-
-#include "cpu/aarch64/cpu_isa_traits.hpp"
 
 #define LDRMAX 255
 #define LDRMIN (-256)
@@ -38,11 +36,10 @@ namespace aarch64 {
 //
 //   The imm9 in the LDR instruction is the optional signed immediate vector
 //   offset, in the range -256 to 255, defaulting to 0.
-template <typename T, cpu_isa_t isa = sve_512>
+template <typename T>
 bool ldr_imm_check(T ofs) {
-    int vlen, vlen_shift;
-    vlen = cpu_isa_traits<isa>::vlen;
-    vlen_shift = cpu_isa_traits<isa>::vlen_shift;
+    int vlen = cpu_isa_traits<sve_512>::vlen;
+    int vlen_shift = cpu_isa_traits<sve_512>::vlen_shift;
     int shifted_ofs = ofs >> vlen_shift;
     return ((shifted_ofs) <= LDRMAX) && (shifted_ofs >= LDRMIN)
             && ((ofs % vlen) == 0);
@@ -52,11 +49,10 @@ bool ldr_imm_check(T ofs) {
 //
 //   The imm9 in the STR instruction is the optional signed immediate vector
 //   offset, in the range -256 to 255, defaulting to 0.
-template <typename T, cpu_isa_t isa = sve_512>
+template <typename T>
 bool str_imm_check(T ofs) {
-    int vlen, vlen_shift;
-    vlen = cpu_isa_traits<isa>::vlen;
-    vlen_shift = cpu_isa_traits<isa>::vlen_shift;
+    int vlen = cpu_isa_traits<sve_512>::vlen;
+    int vlen_shift = cpu_isa_traits<sve_512>::vlen_shift;
     int shifted_ofs = ofs >> vlen_shift;
     return ((shifted_ofs) <= STRMAX) && (shifted_ofs >= STRMIN)
             && ((ofs % vlen) == 0);
@@ -84,12 +80,12 @@ bool prfm_imm_check(T ofs) {
 //
 //   The imm6 in the PRFW instruction is the optional signed immediate vector
 //   offset, in the range -32 to 31, defaulting to 0.
-template <typename T, cpu_isa_t isa = sve_512>
+template <typename T>
 bool prfw_imm_check(T ofs) {
-    int vlen, vlen_shift;
-    vlen = cpu_isa_traits<isa>::vlen;
-    vlen_shift = cpu_isa_traits<isa>::vlen_shift;
+    int vlen = cpu_isa_traits<sve_512>::vlen;
+    int vlen_shift = cpu_isa_traits<sve_512>::vlen_shift;
     int shifted_ofs = ofs >> vlen_shift;
+
     return (shifted_ofs <= PRFWMAX) && (shifted_ofs >= PRFWMIN)
             && ((ofs % vlen) == 0);
 }

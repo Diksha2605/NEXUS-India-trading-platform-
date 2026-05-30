@@ -17,7 +17,6 @@
 #ifndef CPU_X64_JIT_UNI_X8S8S32X_1X1_CONV_KERNEL_HPP
 #define CPU_X64_JIT_UNI_X8S8S32X_1X1_CONV_KERNEL_HPP
 
-#include <memory>
 #include "common/c_types_map.hpp"
 #include "common/memory_tracking.hpp"
 
@@ -136,12 +135,12 @@ struct jit_uni_x8s8s32x_1x1_conv_kernel {
 
         switch (isa) {
             case avx2:
-                kernel_ = utils::make_unique<jit_avx2_x8s8s32x_1x1_conv_kernel>(
+                kernel_ = new jit_avx2_x8s8s32x_1x1_conv_kernel(
                         ajcp, attr, dst_md);
                 return;
             case sse41:
-                kernel_ = utils::make_unique<
-                        jit_sse41_x8s8s32x_1x1_conv_kernel>(ajcp, attr, dst_md);
+                kernel_ = new jit_sse41_x8s8s32x_1x1_conv_kernel(
+                        ajcp, attr, dst_md);
                 return;
             default: assert(!"Current ISA is not supported!");
         }
@@ -152,7 +151,7 @@ struct jit_uni_x8s8s32x_1x1_conv_kernel {
         return status::out_of_memory;
     }
 
-    ~jit_uni_x8s8s32x_1x1_conv_kernel() = default;
+    ~jit_uni_x8s8s32x_1x1_conv_kernel() { delete kernel_; }
 
     void operator()(const jit_1x1_conv_call_s *p) const { (*kernel_)(p); }
 
@@ -174,7 +173,7 @@ struct jit_uni_x8s8s32x_1x1_conv_kernel {
 
 private:
     DNNL_DISALLOW_COPY_AND_ASSIGN(jit_uni_x8s8s32x_1x1_conv_kernel);
-    std::unique_ptr<jit_generator> kernel_;
+    jit_generator *kernel_;
 };
 
 } // namespace x64

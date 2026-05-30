@@ -17,7 +17,6 @@
 #ifndef CPU_X64_JIT_UNI_X8S8S32X_CONV_KERNEL_HPP
 #define CPU_X64_JIT_UNI_X8S8S32X_CONV_KERNEL_HPP
 
-#include <memory>
 #include "common/c_types_map.hpp"
 #include "common/memory_tracking.hpp"
 
@@ -197,15 +196,13 @@ struct jit_uni_x8s8s32x_fwd_kernel {
         switch (ch_block) {
             case 8:
                 if (utils::one_of(isa, avx2)) {
-                    kernel_ = utils::make_unique<
-                            _jit_uni_x8s8s32x_fwd_kernel<isa, Xbyak::Ymm>>(
+                    kernel_ = new _jit_uni_x8s8s32x_fwd_kernel<isa, Xbyak::Ymm>(
                             ajcp, attr, dst_md);
                 } else
                     assert(!"invalid channel blocking for current ISA");
                 return;
             case 4:
-                kernel_ = utils::make_unique<
-                        _jit_uni_x8s8s32x_fwd_kernel<isa, Xbyak::Xmm>>(
+                kernel_ = new _jit_uni_x8s8s32x_fwd_kernel<isa, Xbyak::Xmm>(
                         ajcp, attr, dst_md);
                 return;
             default: assert(!"invalid channel blocking");
@@ -217,7 +214,7 @@ struct jit_uni_x8s8s32x_fwd_kernel {
         return status::out_of_memory;
     }
 
-    ~jit_uni_x8s8s32x_fwd_kernel() = default;
+    ~jit_uni_x8s8s32x_fwd_kernel() { delete kernel_; }
 
     void operator()(const jit_conv_call_s *p) const { (*kernel_)(p); }
 
@@ -232,7 +229,7 @@ struct jit_uni_x8s8s32x_fwd_kernel {
 
 private:
     DNNL_DISALLOW_COPY_AND_ASSIGN(jit_uni_x8s8s32x_fwd_kernel);
-    std::unique_ptr<jit_generator> kernel_;
+    jit_generator *kernel_;
 };
 
 } // namespace x64

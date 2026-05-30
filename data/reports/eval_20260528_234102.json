@@ -1,0 +1,121 @@
+{
+  "generated": "28 May 2026 23:40:44",
+  "platform": "NXIO v3.0.0",
+  "compliance": "SEBI Algo-ID April 2026 Mandate",
+  "results": [
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 23:40:44",
+      "status": "ok",
+      "samples": 199,
+      "correct": 105,
+      "accuracy_pct": 52.76,
+      "precision_up": 0.0,
+      "recall_up": 0.0,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 23:40:53",
+      "status": "ok",
+      "samples": 199,
+      "correct": 102,
+      "accuracy_pct": 51.26,
+      "precision_up": 0.0,
+      "recall_up": 0.0,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "RELIANCE",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 23:40:54",
+      "status": "ok",
+      "samples": 199,
+      "correct": 107,
+      "accuracy_pct": 53.77,
+      "precision_up": 49.32,
+      "recall_up": 80.0,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 23:40:55",
+      "status": "ok",
+      "samples": 199,
+      "correct": 92,
+      "accuracy_pct": 46.23,
+      "precision_up": 44.72,
+      "recall_up": 58.51,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 23:40:56",
+      "status": "ok",
+      "samples": 199,
+      "correct": 104,
+      "accuracy_pct": 52.26,
+      "precision_up": 0.0,
+      "recall_up": 0.0,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "TCS",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 23:40:57",
+      "status": "ok",
+      "samples": 199,
+      "correct": 111,
+      "accuracy_pct": 55.78,
+      "precision_up": 0.0,
+      "recall_up": 0.0,
+      "grade": "PASS"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "5m",
+      "timestamp": "28 May 2026 23:40:58",
+      "status": "ok",
+      "samples": 199,
+      "correct": 104,
+      "accuracy_pct": 52.26,
+      "precision_up": 46.67,
+      "recall_up": 30.77,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "15m",
+      "timestamp": "28 May 2026 23:41:00",
+      "status": "ok",
+      "samples": 199,
+      "correct": 109,
+      "accuracy_pct": 54.77,
+      "precision_up": 0.0,
+      "recall_up": 0.0,
+      "grade": "REVIEW"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "timeframe": "1h",
+      "timestamp": "28 May 2026 23:41:01",
+      "status": "ok",
+      "samples": 199,
+      "correct": 97,
+      "accuracy_pct": 48.74,
+      "precision_up": 47.22,
+      "recall_up": 92.39,
+      "grade": "REVIEW"
+    }
+  ],
+  "summary": {
+    "models_evaluated": 9,
+    "avg_accuracy_pct": 51.98,
+    "pass": 1,
+    "review": 8
+  }
+}

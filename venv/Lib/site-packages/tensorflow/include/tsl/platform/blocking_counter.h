@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <atomic>
 
-#include "xla/tsl/platform/logging.h"
+#include "tsl/platform/logging.h"
 #include "tsl/platform/mutex.h"
 
 namespace tsl {

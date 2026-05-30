@@ -21,7 +21,6 @@
 namespace mlir {
 
 class DataLayoutAnalysis;
-class FunctionOpInterface;
 class LowerToLLVMOptions;
 
 namespace LLVM {
@@ -51,37 +50,19 @@ public:
   LLVMTypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options,
                     const DataLayoutAnalysis *analysis = nullptr);
 
-  /// Convert a function type. The arguments and results are converted one by
+  /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
   Type convertFunctionSignature(FunctionType funcTy, bool isVariadic,
                                 bool useBarePtrCallConv,
                                 SignatureConversion &result) const;
 
-  /// Convert a function type. The arguments and results are converted one by
-  /// one and results are packed into a wrapped LLVM IR structure type. `result`
-  /// is populated with argument mapping. Converted types of `llvm.byval` and
-  /// `llvm.byref` function arguments which are not LLVM pointers are overridden
-  /// with LLVM pointers. Overridden arguments are returned in
-  /// `byValRefNonPtrAttrs`.
-  Type convertFunctionSignature(FunctionOpInterface funcOp, bool isVariadic,
-                                bool useBarePtrCallConv,
-                                LLVMTypeConverter::SignatureConversion &result,
-                                SmallVectorImpl<std::optional<NamedAttribute>>
-                                    &byValRefNonPtrAttrs) const;
-
   /// Convert a non-empty list of types to be returned from a function into an
   /// LLVM-compatible type. In particular, if more than one value is returned,
   /// create an LLVM dialect structure type with elements that correspond to
   /// each of the types converted with `convertCallingConventionType`.
-  ///
-  /// Populate the converted (unpacked) types into `groupedTypes`, if provided.
-  /// `groupedType` contains one nested vector per input type. In case of a 1:N
-  /// conversion, a nested vector may contain 0 or more then 1 converted type.
-  Type
-  packFunctionResults(TypeRange types, bool useBarePointerCallConv = false,
-                      SmallVector<SmallVector<Type>> *groupedTypes = nullptr,
-                      int64_t *numConvertedTypes = nullptr) const;
+  Type packFunctionResults(TypeRange types,
+                           bool useBarePointerCallConv = false) const;
 
   /// Convert a non-empty list of types of values produced by an operation into
   /// an LLVM-compatible type. In particular, if more than one value is
@@ -94,9 +75,15 @@ public:
   /// UnrankedMemRefType, are converted following the specific rules for the
   /// calling convention. Calling convention independent types are converted
   /// following the default LLVM type conversions.
-  LogicalResult
-  convertCallingConventionType(Type type, SmallVectorImpl<Type> &result,
-                               bool useBarePointerCallConv = false) const;
+  Type convertCallingConventionType(Type type,
+                                    bool useBarePointerCallConv = false) const;
+
+  /// Promote the bare pointers in 'values' that resulted from memrefs to
+  /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
+  /// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
+  void promoteBarePtrsToDescriptors(ConversionPatternRewriter &rewriter,
+                                    Location loc, ArrayRef<Type> stdTypes,
+                                    SmallVectorImpl<Value> &values) const;
 
   /// Returns the MLIR context.
   MLIRContext &getContext() const;
@@ -109,14 +96,9 @@ public:
   /// Promote the LLVM representation of all operands including promoting MemRef
   /// descriptors to stack and use pointers to struct to avoid the complexity
   /// of the platform-specific C/C++ ABI lowering related to struct argument
-  /// passing. (The ArrayRef variant is for 1:N.)
+  /// passing.
   SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
-                                        ArrayRef<ValueRange> adaptorOperands,
-                                        OpBuilder &builder,
-                                        bool useBarePtrCallConv = false) const;
-  SmallVector<Value, 4> promoteOperands(Location loc, ValueRange opOperands,
-                                        ValueRange adaptorOperands,
-                                        OpBuilder &builder,
+                                        ValueRange operands, OpBuilder &builder,
                                         bool useBarePtrCallConv = false) const;
 
   /// Promote the LLVM struct representation of one MemRef descriptor to stack
@@ -166,6 +148,44 @@ public:
   /// Check if a memref type can be converted to a bare pointer.
   static bool canConvertToBarePtr(BaseMemRefType type);
 
+protected:
+  /// Pointer to the LLVM dialect.
+  LLVM::LLVMDialect *llvmDialect;
+
+  // Recursive structure detection.
+  // We store one entry per thread here, and rely on locking.
+  DenseMap<uint64_t, std::unique_ptr<SmallVector<Type>>> conversionCallStack;
+  llvm::sys::SmartRWMutex<true> callStackMutex;
+  SmallVector<Type> &getCurrentThreadRecursiveStack();
+
+private:
+  /// Convert a function type.  The arguments and results are converted one by
+  /// one.  Additionally, if the function returns more than one value, pack the
+  /// results into an LLVM IR structure type so that the converted function type
+  /// returns at most one result.
+  Type convertFunctionType(FunctionType type) const;
+
+  /// Convert the index type.  Uses llvmModule data layout to create an integer
+  /// of the pointer bitwidth.
+  Type convertIndexType(IndexType type) const;
+
+  /// Convert an integer type `i*` to `!llvm<"i*">`.
+  Type convertIntegerType(IntegerType type) const;
+
+  /// Convert a floating point type: `f16` to `f16`, `f32` to
+  /// `f32` and `f64` to `f64`.  `bf16` is not supported
+  /// by LLVM. 8-bit float types are converted to 8-bit integers as this is how
+  /// all LLVM backends that support them currently represent them.
+  Type convertFloatType(FloatType type) const;
+
+  /// Convert complex number type: `complex<f16>` to `!llvm<"{ half, half }">`,
+  /// `complex<f32>` to `!llvm<"{ float, float }">`, and `complex<f64>` to
+  /// `!llvm<"{ double, double }">`. `complex<bf16>` is not supported.
+  Type convertComplexType(ComplexType type) const;
+
+  /// Convert a memref type into an LLVM type that captures the relevant data.
+  Type convertMemRefType(MemRefType type) const;
+
   /// Convert a memref type into a list of LLVM IR types that will form the
   /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
   /// arrays in the descriptors are unpacked to individual index-typed elements,
@@ -200,58 +220,6 @@ public:
   /// !llvm<"i8*"> (type-erased pointer).
   /// These types can be recomposed to a unranked memref descriptor struct.
   SmallVector<Type, 2> getUnrankedMemRefDescriptorFields() const;
-
-protected:
-  /// Pointer to the LLVM dialect.
-  LLVM::LLVMDialect *llvmDialect;
-
-  // Recursive structure detection.
-  // We store one entry per thread here, and rely on locking.
-  DenseMap<uint64_t, std::unique_ptr<SmallVector<Type>>> conversionCallStack;
-  llvm::sys::SmartRWMutex<true> callStackMutex;
-  SmallVector<Type> &getCurrentThreadRecursiveStack();
-
-private:
-  /// Convert a function type. The arguments and results are converted one by
-  /// one. Additionally, if the function returns more than one value, pack the
-  /// results into an LLVM IR structure type so that the converted function type
-  /// returns at most one result.
-  Type convertFunctionType(FunctionType type) const;
-
-  /// Common implementation for `convertFunctionSignature` methods. Convert a
-  /// function type. The arguments and results are converted one by one and
-  /// results are packed into a wrapped LLVM IR structure type. `result` is
-  /// populated with argument mapping. If `byValRefNonPtrAttrs` is provided,
-  /// converted types of `llvm.byval` and `llvm.byref` function arguments which
-  /// are not LLVM pointers are overridden with LLVM pointers. `llvm.byval` and
-  /// `llvm.byref` arguments that were already converted to LLVM pointer types
-  /// are removed from 'byValRefNonPtrAttrs`.
-  Type convertFunctionSignatureImpl(
-      FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
-      LLVMTypeConverter::SignatureConversion &result,
-      SmallVectorImpl<std::optional<NamedAttribute>> *byValRefNonPtrAttrs)
-      const;
-
-  /// Convert the index type.  Uses llvmModule data layout to create an integer
-  /// of the pointer bitwidth.
-  Type convertIndexType(IndexType type) const;
-
-  /// Convert an integer type `i*` to `!llvm<"i*">`.
-  Type convertIntegerType(IntegerType type) const;
-
-  /// Convert a floating point type: `f16` to `f16`, `f32` to
-  /// `f32` and `f64` to `f64`.  `bf16` is not supported
-  /// by LLVM. 8-bit float types are converted to 8-bit integers as this is how
-  /// all LLVM backends that support them currently represent them.
-  Type convertFloatType(FloatType type) const;
-
-  /// Convert complex number type: `complex<f16>` to `!llvm<"{ half, half }">`,
-  /// `complex<f32>` to `!llvm<"{ float, float }">`, and `complex<f64>` to
-  /// `!llvm<"{ double, double }">`. `complex<bf16>` is not supported.
-  Type convertComplexType(ComplexType type) const;
-
-  /// Convert a memref type into an LLVM type that captures the relevant data.
-  Type convertMemRefType(MemRefType type) const;
 
   /// Convert an unranked memref type to an LLVM type that captures the
   /// runtime rank and a pointer to the static ranked memref desc

@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2020-2024 Intel Corporation
+* Copyright 2020-2022 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -46,7 +46,9 @@ public:
     DECLARE_CPU_JIT_AUX_FUNCTIONS(jit_avx512_common_lrn_kernel_bwd_blocked_t)
 
     jit_avx512_common_lrn_kernel_bwd_blocked_t(const struct nChw16c_across_t &J,
-            float alpha, float beta, int local_size, int use_h_parallel);
+            float alpha, float beta, int local_size, int use_h_parallel,
+            void *code_ptr = nullptr,
+            size_t code_size = 1 * Xbyak::DEFAULT_MAX_CODE_SIZE);
 
 private:
     void generate() override;

@@ -22,7 +22,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -149,10 +148,9 @@ public:
 
   /// Verify that shape and elementType are actually allowed for the
   /// MMAMatrixType.
-  static LogicalResult
-  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
-                   ArrayRef<int64_t> shape, Type elementType,
-                   StringRef operand);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              ArrayRef<int64_t> shape, Type elementType,
+                              StringRef operand);
 
   /// Get number of dims.
   unsigned getNumDims() const;
@@ -178,8 +176,8 @@ enum class SparseHandleKind { SpMat, DnTensor, SpGEMMOp };
 class SparseDnTensorHandleType
     : public Type::TypeBase<SparseDnTensorHandleType, Type, TypeStorage> {
 public:
-  using Base =
-      Type::TypeBase<SparseDnTensorHandleType, Type, TypeStorage>::Base;
+  using Base = typename Type::TypeBase<SparseDnTensorHandleType, Type,
+                                       TypeStorage>::Base;
   using Base::Base;
 
   static constexpr StringLiteral name = "gpu.sparse.dntensor_handle";
@@ -188,7 +186,8 @@ public:
 class SparseSpMatHandleType
     : public Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage> {
 public:
-  using Base = Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage>::Base;
+  using Base =
+      typename Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage>::Base;
   using Base::Base;
 
   static constexpr StringLiteral name = "gpu.sparse.spmat_handle";
@@ -197,8 +196,8 @@ public:
 class SparseSpGEMMOpHandleType
     : public Type::TypeBase<SparseSpGEMMOpHandleType, Type, TypeStorage> {
 public:
-  using Base =
-      Type::TypeBase<SparseSpGEMMOpHandleType, Type, TypeStorage>::Base;
+  using Base = typename Type::TypeBase<SparseSpGEMMOpHandleType, Type,
+                                       TypeStorage>::Base;
   using Base::Base;
 
   static constexpr StringLiteral name = "gpu.sparse.spgemmop_handle";

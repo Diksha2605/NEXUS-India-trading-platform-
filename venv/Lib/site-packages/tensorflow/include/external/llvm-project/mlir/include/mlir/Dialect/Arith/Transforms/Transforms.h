@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_ARITH_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class Location;
@@ -22,17 +23,6 @@ enum class BoundType;
 } // namespace presburger
 
 namespace arith {
-
-/// Reify a bound for the given variable in terms of SSA values for which
-/// `stopCondition` is met.
-///
-/// By default, lower/equal bounds are closed and upper bounds are open. If
-/// `closedUB` is set to "true", upper bounds are also closed.
-FailureOr<OpFoldResult>
-reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
-                const ValueBoundsConstraintSet::Variable &var,
-                ValueBoundsConstraintSet::StopConditionFn stopCondition,
-                bool closedUB = false);
 
 /// Reify a bound for the given index-typed value in terms of SSA values for
 /// which `stopCondition` is met. If no stop condition is specified, reify in
@@ -53,7 +43,7 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
 ///   ValueBoundsOpInterface, no bound can be computed.
 FailureOr<OpFoldResult> reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    const ValueBoundsConstraintSet::StopConditionFn &stopCondition = nullptr,
+    ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
     bool closedUB = false);
 
 /// Reify a bound for the specified dimension of the given shaped value in terms
@@ -65,7 +55,7 @@ FailureOr<OpFoldResult> reifyIndexValueBound(
 FailureOr<OpFoldResult> reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim,
-    const ValueBoundsConstraintSet::StopConditionFn &stopCondition = nullptr,
+    ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
     bool closedUB = false);
 
 } // namespace arith

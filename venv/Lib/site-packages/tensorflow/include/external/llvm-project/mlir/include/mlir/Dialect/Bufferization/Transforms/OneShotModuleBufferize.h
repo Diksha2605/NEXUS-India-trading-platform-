@@ -9,27 +9,22 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTMODULEBUFFERIZE_H
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTMODULEBUFFERIZE_H
 
-namespace llvm {
-struct LogicalResult;
-} // namespace llvm
-
 namespace mlir {
-class Operation;
+
+struct LogicalResult;
+class ModuleOp;
 
 namespace bufferization {
 struct BufferizationStatistics;
 class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
-class BufferizationState;
 
 /// Analyze `moduleOp` and its nested ops. Bufferization decisions are stored in
-/// `state`. This operates on any `SymbolTable` op.
-llvm::LogicalResult
-analyzeModuleOp(Operation *moduleOp, OneShotAnalysisState &state,
-                BufferizationStatistics *statistics = nullptr);
+/// `state`.
+LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
+                              BufferizationStatistics *statistics = nullptr);
 
-/// Bufferize an `op`s nested ops that implement `BufferizableOpInterface`.
-/// This operates on any `SymbolTable` op.
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///
 /// Note: This function does not run One-Shot Analysis. No buffer copies are
 /// inserted except two cases:
@@ -38,22 +33,21 @@ analyzeModuleOp(Operation *moduleOp, OneShotAnalysisState &state,
 /// - `options.copyBeforeWrite` is not set and `options.noAnalysisFuncFilter`
 ///   is not empty. The FuncOps it contains were not analyzed. Buffer copies
 ///   will be inserted only to these FuncOps.
-llvm::LogicalResult bufferizeModuleOp(
-    Operation *moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationState &state, BufferizationStatistics *statistics = nullptr);
+LogicalResult bufferizeModuleOp(ModuleOp moduleOp,
+                                const OneShotBufferizationOptions &options,
+                                BufferizationStatistics *statistics = nullptr);
 
-/// Remove bufferization attributes on every FuncOp arguments in the SymbolTable
-/// op.
-void removeBufferizationAttributesInModule(Operation *moduleOp);
+/// Remove bufferization attributes on every FuncOp arguments in the ModuleOp.
+void removeBufferizationAttributesInModule(ModuleOp moduleOp);
 
-/// Run One-Shot Module Bufferization on the given SymbolTable. Performs a
-/// simple function call analysis to determine which function arguments are
+/// Run One-Shot Module Bufferization on the given module. Performs a simple
+/// function call analysis to determine which function arguments are
 /// inplaceable. Then analyzes and bufferizes FuncOps one-by-one with One-Shot
 /// Bufferize.
-llvm::LogicalResult runOneShotModuleBufferize(
-    Operation *moduleOp,
+LogicalResult runOneShotModuleBufferize(
+    ModuleOp moduleOp,
     const bufferization::OneShotBufferizationOptions &options,
-    BufferizationState &state, BufferizationStatistics *statistics = nullptr);
+    BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

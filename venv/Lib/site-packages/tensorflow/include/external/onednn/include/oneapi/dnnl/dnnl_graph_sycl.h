@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2020-2024 Intel Corporation
+* Copyright 2020-2022 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/// @addtogroup dnnl_api
-/// @{
 
 /// @addtogroup dnnl_graph_api
 /// @{
@@ -89,8 +86,6 @@ dnnl_status_t DNNL_API dnnl_graph_sycl_interop_compiled_partition_execute(
 /// @} dnnl_graph_api_interop
 
 /// @} dnnl_graph_api
-
-/// @} dnnl_api
 
 #ifdef __cplusplus
 }

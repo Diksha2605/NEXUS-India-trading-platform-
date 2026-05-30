@@ -28,10 +28,6 @@
 #  define ITT_OS_FREEBSD   4
 #endif /* ITT_OS_FREEBSD */
 
-#ifndef ITT_OS_OPENBSD
-#  define ITT_OS_OPENBSD   5
-#endif /* ITT_OS_OPENBSD */
-
 #ifndef ITT_OS
 #  if defined WIN32 || defined _WIN32
 #    define ITT_OS ITT_OS_WIN
@@ -39,8 +35,6 @@
 #    define ITT_OS ITT_OS_MAC
 #  elif defined( __FreeBSD__ )
 #    define ITT_OS ITT_OS_FREEBSD
-#  elif defined( __OpenBSD__ )
-#    define ITT_OS ITT_OS_OPENBSD
 #  else
 #    define ITT_OS ITT_OS_LINUX
 #  endif
@@ -62,10 +56,6 @@
 #  define ITT_PLATFORM_FREEBSD 4
 #endif /* ITT_PLATFORM_FREEBSD */
 
-#ifndef ITT_PLATFORM_OPENBSD
-#  define ITT_PLATFORM_OPENBSD 5
-#endif /* ITT_PLATFORM_OPENBSD */
-
 #ifndef ITT_PLATFORM
 #  if ITT_OS==ITT_OS_WIN
 #    define ITT_PLATFORM ITT_PLATFORM_WIN
@@ -73,8 +63,6 @@
 #    define ITT_PLATFORM ITT_PLATFORM_MAC
 #  elif ITT_OS==ITT_OS_FREEBSD
 #    define ITT_PLATFORM ITT_PLATFORM_FREEBSD
-#  elif ITT_OS==ITT_OS_OPENBSD
-#    define ITT_PLATFORM ITT_PLATFORM_OPENBSD
 #  else
 #    define ITT_PLATFORM ITT_PLATFORM_POSIX
 #  endif
@@ -234,7 +222,7 @@ extern "C" {
  *     only pauses tracing and analyzing memory access.
  *     It does not pause tracing or analyzing threading APIs.
  *   .
- * - Intel(R) VTune(TM) Profiler:
+ * - Intel(R) Parallel Amplifier and Intel(R) VTune(TM) Amplifier XE:
  *   - Does continue to record when new threads are started.
  *   .
  * - Other effects:

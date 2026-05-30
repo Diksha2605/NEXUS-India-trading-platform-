@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Copyright 2019-2022 Intel Corporation
-* Copyright 2020-2024 FUJITSU LIMITED
+* Copyright 2020-2022 FUJITSU LIMITED
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #define CPU_AARCH64_JIT_UNI_SOFTMAX_HPP
 
 #include <assert.h>
-#include <memory>
 
 #include "common/c_types_map.hpp"
 #include "common/memory_tracking.hpp"
@@ -75,12 +74,8 @@ struct jit_uni_softmax_fwd_t : public primitive_t {
             const auto src_dt = src_md()->data_type;
             const auto dst_dt = dst_md()->data_type;
             bool ok = mayiuse(isa) && is_fwd() && !has_zero_dim_memory()
-                    && utils::one_of(src_dt, f32, bf16, s8, u8)
-                    && utils::one_of(dst_dt, f32, bf16, s8, u8)
-                    && IMPLICATION(
-                            utils::one_of(bf16, src_dt, dst_dt), mayiuse_bf16())
-                    && (mayiuse(sve_512) || mayiuse(sve_256)
-                            || mayiuse(sve_128))
+                    && utils::one_of(src_dt, f32, s8, u8)
+                    && utils::one_of(dst_dt, f32, s8, u8) && mayiuse(sve_512)
                     && attr()->has_default_values(skip_mask_t::scales_runtime)
                     && attr_scales_ok()
                     && set_default_formats() == status::success;
@@ -120,9 +115,7 @@ struct jit_uni_softmax_fwd_t : public primitive_t {
 
 private:
     const pd_t *pd() const { return (const pd_t *)primitive_t::pd().get(); }
-    std::unique_ptr<softmax_impl::driver_t<isa>> softmax_driver_;
-
-    DNNL_DISALLOW_COPY_AND_ASSIGN(jit_uni_softmax_fwd_t);
+    softmax_impl::driver_t<isa> *softmax_driver_;
 };
 
 template <cpu_isa_t isa>
@@ -157,19 +150,12 @@ struct jit_uni_softmax_bwd_t : public primitive_t {
             };
 
             using namespace data_type;
-
             bool ok = mayiuse(isa) && !is_fwd() && !has_zero_dim_memory()
-                    && utils::one_of(dst_md()->data_type, f32, bf16)
-                    && utils::one_of(diff_dst_md()->data_type, f32, bf16)
-                    && utils::one_of(diff_src_md()->data_type, f32, bf16)
-                    && IMPLICATION(utils::one_of(bf16, dst_md()->data_type,
-                                           diff_dst_md()->data_type,
-                                           diff_src_md()->data_type),
-                            mayiuse_bf16())
-                    && (mayiuse(sve_512) || mayiuse(sve_256))
-                    && attr()->has_default_values()
+                    && utils::one_of(dst_md()->data_type, f32)
+                    && utils::one_of(diff_dst_md()->data_type, f32)
+                    && utils::one_of(diff_src_md()->data_type, f32)
+                    && mayiuse(sve_512) && attr()->has_default_values()
                     && set_default_formats() == status::success;
-
             if (!ok) return status::unimplemented;
 
             ok = memory_desc_wrapper(diff_src_md())
@@ -194,9 +180,7 @@ struct jit_uni_softmax_bwd_t : public primitive_t {
 private:
     const pd_t *pd() const { return (const pd_t *)primitive_t::pd().get(); }
 
-    std::unique_ptr<softmax_impl::driver_t<isa>> softmax_driver_;
-
-    DNNL_DISALLOW_COPY_AND_ASSIGN(jit_uni_softmax_bwd_t);
+    softmax_impl::driver_t<isa> *softmax_driver_;
 };
 
 } // namespace aarch64

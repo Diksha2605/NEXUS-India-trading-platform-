@@ -1027,13 +1027,14 @@ function updateBuySummary(){
 async function executeBuy(){
   const qty=parseInt(document.getElementById("buyQty").value);
   const price=parseFloat(document.getElementById("buyPrice").value);
-  const sl=parseFloat(document.getElementById("buySL").value)||null;
+  let sl=parseFloat(document.getElementById("buySL").value)||null;
   const tp=parseFloat(document.getElementById("buyTP").value)||null;
   if(!qty||!price){showToast("Enter quantity and price","error");return;}
+  if(sl!==null && sl>=price){ sl=null; }
   try{
     const res=await fetch(`${API}/paper/buy`,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json","X-API-Key":"change-this-to-a-strong-secret-key"},
       body:JSON.stringify({symbol:state.asset,price,quantity:qty,sl,tp,confidence:state.signalData?.confidence}),
     }).then(r=>r.json());
     if(res.success){
@@ -1083,7 +1084,7 @@ async function executeSell(){
   try{
     const res=await fetch(`${API}/paper/sell`,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{"Content-Type":"application/json","X-API-Key":"change-this-to-a-strong-secret-key"},
       body:JSON.stringify({symbol:state.asset,price,quantity:qty}),
     }).then(r=>r.json());
     if(res.success){

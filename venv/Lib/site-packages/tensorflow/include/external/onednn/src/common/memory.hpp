@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2018-2024 Intel Corporation
+* Copyright 2018-2023 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -55,12 +55,7 @@ struct dnnl_memory : public dnnl::impl::c_compatible {
     dnnl_memory(dnnl::impl::engine_t *engine,
             const dnnl::impl::memory_desc_t *md,
             std::unique_ptr<dnnl::impl::memory_storage_t> &&memory_storage);
-#ifdef DNNL_EXPERIMENTAL_SPARSE
-    dnnl_memory(dnnl::impl::engine_t *engine,
-            const dnnl::impl::memory_desc_t *md,
-            std::vector<std::unique_ptr<dnnl::impl::memory_storage_t>>
-                    &&memory_storage);
-#endif
+    virtual ~dnnl_memory() = default;
 
     /** returns memory's engine */
     dnnl::impl::engine_t *engine() const { return engine_; }
@@ -82,9 +77,7 @@ struct dnnl_memory : public dnnl::impl::c_compatible {
 
     /** returns data handle */
     dnnl::impl::status_t get_data_handle(void **handle, int index = 0) const {
-        auto ms = memory_storage(index);
-        if (!ms) return dnnl::impl::status::invalid_arguments;
-        return ms->get_data_handle(handle);
+        return memory_storage(index)->get_data_handle(handle);
     }
 
     /** sets data handle */
@@ -98,15 +91,7 @@ struct dnnl_memory : public dnnl::impl::c_compatible {
 
     size_t get_num_handles() const { return memory_storages_.size(); }
 
-    void retain() { counter_++; }
-
-    void release() {
-        if (--counter_ == 0) { delete this; }
-    }
-
 protected:
-    virtual ~dnnl_memory() = default;
-
     dnnl::impl::engine_t *engine_;
     const dnnl::impl::memory_desc_t md_;
 
@@ -116,17 +101,6 @@ private:
 
     // Number of storages is larger than 1 only for sparse memory.
     std::vector<std::unique_ptr<dnnl::impl::memory_storage_t>> memory_storages_;
-    std::atomic<int> counter_;
 };
-
-namespace dnnl {
-namespace impl {
-
-struct memory_deleter_t {
-    void operator()(memory_t *m) const { m->release(); }
-};
-
-} // namespace impl
-} // namespace dnnl
 
 #endif

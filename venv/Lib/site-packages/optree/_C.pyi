@@ -1,4 +1,4 @@
-# Copyright 2022-2025 MetaOPT Team. All Rights Reserved.
+# Copyright 2022-2026 MetaOPT Team. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ PYBIND11_HAS_NATIVE_ENUM: Final[bool]
 PYBIND11_HAS_INTERNALS_WITH_SMART_HOLDER_SUPPORT: Final[bool]
 PYBIND11_HAS_SUBINTERPRETER_SUPPORT: Final[bool]
 GLIBCXX_USE_CXX11_ABI: Final[bool]
+MSVC_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR: Final[bool]
 OPTREE_HAS_SUBINTERPRETER_SUPPORT: Final[bool]
 OPTREE_HAS_READ_WRITE_LOCK: Final[bool]
 

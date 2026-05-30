@@ -1,4 +1,4 @@
-# Copyright 2022-2025 MetaOPT Team. All Rights Reserved.
+# Copyright 2022-2026 MetaOPT Team. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 # pylint: disable=invalid-name
 
-__version__ = '0.19.0'
+__version__ = '0.19.1'
 __license__ = 'Apache-2.0'
 __author__ = 'OpTree Contributors'
 __release__ = True

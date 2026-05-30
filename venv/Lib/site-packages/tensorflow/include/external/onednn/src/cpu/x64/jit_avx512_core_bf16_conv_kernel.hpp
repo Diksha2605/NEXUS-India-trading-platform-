@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2019-2024 Intel Corporation
+* Copyright 2019-2023 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 #ifndef CPU_X64_JIT_AVX512_CORE_BF16_CONV_KERNEL_HPP
 #define CPU_X64_JIT_AVX512_CORE_BF16_CONV_KERNEL_HPP
 
-#include <memory>
 #include "common/c_types_map.hpp"
 #include "common/memory_tracking.hpp"
 
@@ -50,6 +49,7 @@ private:
     using reg64_t = const Xbyak::Reg64;
     enum {
         ker_reg_base_idx = 28,
+        ker_code_size = 1024 * 1024,
     };
 
     reg64_t param = abi_param1; //L: RDI, W: RCX
@@ -219,18 +219,15 @@ struct jit_avx512_core_bf16_fwd_kernel {
         : kernel_(nullptr) {
         switch (ajcp.oc_block) {
             case 16:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_fwd_kernel<Xbyak::Zmm>>(
+                kernel_ = new _jit_avx512_core_bf16_fwd_kernel<Xbyak::Zmm>(
                         ajcp, attr, dst_md);
                 return;
             case 8:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_fwd_kernel<Xbyak::Ymm>>(
+                kernel_ = new _jit_avx512_core_bf16_fwd_kernel<Xbyak::Ymm>(
                         ajcp, attr, dst_md);
                 return;
             case 4:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_fwd_kernel<Xbyak::Xmm>>(
+                kernel_ = new _jit_avx512_core_bf16_fwd_kernel<Xbyak::Xmm>(
                         ajcp, attr, dst_md);
                 return;
             default: assert(!"invalid channel blocking");
@@ -242,7 +239,7 @@ struct jit_avx512_core_bf16_fwd_kernel {
         return status::out_of_memory;
     }
 
-    ~jit_avx512_core_bf16_fwd_kernel() = default;
+    ~jit_avx512_core_bf16_fwd_kernel() { delete kernel_; }
 
     static status_t init_conf(jit_conv_conf_t &jcp,
             const convolution_desc_t &cd, memory_desc_t &src_pd,
@@ -256,14 +253,15 @@ struct jit_avx512_core_bf16_fwd_kernel {
 
 private:
     DNNL_DISALLOW_COPY_AND_ASSIGN(jit_avx512_core_bf16_fwd_kernel);
-    std::unique_ptr<jit_generator> kernel_;
+    jit_generator *kernel_;
 };
 
 template <typename Vmm>
 struct _jit_avx512_core_bf16_bwd_data_kernel : public jit_generator {
 
     _jit_avx512_core_bf16_bwd_data_kernel(const jit_conv_conf_t &ajcp)
-        : jit_generator(jit_name(), avx512_core_bf16)
+        : jit_generator(
+                jit_name(), nullptr, ker_code_size, true, avx512_core_bf16)
         , jcp(ajcp)
         , bf16_emu_(nullptr) {
         if (!isa_has_bf16(jcp.isa))
@@ -283,6 +281,7 @@ private:
     using reg64_t = const Xbyak::Reg64;
     enum {
         ker_reg_base_idx = 31,
+        ker_code_size = 1024 * 1024,
     };
 
     reg64_t param = abi_param1;
@@ -435,18 +434,15 @@ struct jit_avx512_core_bf16_bwd_data_kernel {
         : kernel_(nullptr) {
         switch (ajcp.ic_block) {
             case 16:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Zmm>>(
+                kernel_ = new _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Zmm>(
                         ajcp);
                 return;
             case 8:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Ymm>>(
+                kernel_ = new _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Ymm>(
                         ajcp);
                 return;
             case 4:
-                kernel_ = utils::make_unique<
-                        _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Xmm>>(
+                kernel_ = new _jit_avx512_core_bf16_bwd_data_kernel<Xbyak::Xmm>(
                         ajcp);
                 return;
             default: assert(!"invalid channel blocking");
@@ -458,7 +454,7 @@ struct jit_avx512_core_bf16_bwd_data_kernel {
         return status::out_of_memory;
     }
 
-    ~jit_avx512_core_bf16_bwd_data_kernel() = default;
+    ~jit_avx512_core_bf16_bwd_data_kernel() { delete kernel_; }
 
     static status_t init_conf(jit_conv_conf_t &jcp,
             const convolution_desc_t &cd, memory_desc_t &diff_src_md,
@@ -469,14 +465,15 @@ struct jit_avx512_core_bf16_bwd_data_kernel {
 
 private:
     DNNL_DISALLOW_COPY_AND_ASSIGN(jit_avx512_core_bf16_bwd_data_kernel);
-    std::unique_ptr<jit_generator> kernel_;
+    jit_generator *kernel_;
 };
 
 struct jit_avx512_core_bf16_conv_bwd_weights_kernel_f32 : public jit_generator {
 
     jit_avx512_core_bf16_conv_bwd_weights_kernel_f32(
             const jit_conv_conf_t &ajcp)
-        : jit_generator(jit_name(), avx512_core_bf16)
+        : jit_generator(
+                jit_name(), nullptr, ker_code_size, true, avx512_core_bf16)
         , jcp(ajcp)
         , bf16_emu_(nullptr) {
         if (!isa_has_bf16(jcp.isa)) {
@@ -524,6 +521,7 @@ private:
         sizeof_cacheline = 64,
         full_spat_opt_working_set_size = 48 * 1024,
         full_spat_max_working_set_size = 128 * 1024,
+        ker_code_size = 1024 * 1024,
     };
     static const int max_ur_w;
 

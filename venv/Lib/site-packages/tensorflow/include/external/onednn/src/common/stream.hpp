@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2016-2024 Intel Corporation
+* Copyright 2016-2023 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -21,14 +21,13 @@
 #include "oneapi/dnnl/dnnl.h"
 #include "oneapi/dnnl/dnnl_threadpool_iface.hpp"
 
-#include "common/c_types_map.hpp"
-#include "common/engine.hpp"
-#include "common/stream_impl.hpp"
-#include "common/utils.hpp"
+#include "c_types_map.hpp"
+#include "engine.hpp"
+#include "utils.hpp"
 
 struct dnnl_stream : public dnnl::impl::c_compatible {
-    dnnl_stream(dnnl::impl::engine_t *engine, dnnl::impl::stream_impl_t *impl)
-        : engine_(engine), impl_(impl) {}
+    dnnl_stream(dnnl::impl::engine_t *engine, unsigned flags)
+        : engine_(engine), flags_(flags) {}
     virtual ~dnnl_stream() {}
 
     /** returns stream's engine */
@@ -39,7 +38,7 @@ struct dnnl_stream : public dnnl::impl::c_compatible {
     }
 
     /** returns stream's kind */
-    unsigned flags() const { return impl_->flags(); }
+    unsigned flags() const { return flags_; }
 
     virtual dnnl::impl::status_t enqueue_primitive(
             const primitive_iface_t *primitive_iface,
@@ -52,45 +51,50 @@ struct dnnl_stream : public dnnl::impl::c_compatible {
     virtual void after_exec_hook() {}
 
     virtual dnnl::impl::status_t reset_profiling() {
-        if (!is_profiling_enabled())
-            return dnnl::impl::status::invalid_arguments;
         return dnnl::impl::status::unimplemented;
     }
 
     virtual dnnl::impl::status_t get_profiling_data(
             dnnl::impl::profiling_data_kind_t data_kind, int *num_entries,
             uint64_t *data) const {
-        if (!is_profiling_enabled())
-            return dnnl::impl::status::invalid_arguments;
         return dnnl::impl::status::unimplemented;
     }
 
     virtual dnnl::impl::status_t notify_profiling_complete() const {
-        if (!is_profiling_enabled())
-            return dnnl::impl::status::invalid_arguments;
         return dnnl::impl::status::unimplemented;
     }
 
-    bool is_profiling_enabled() const { return impl_->is_profiling_enabled(); }
+    bool is_profiling_enabled() const {
+        return (flags() & dnnl::impl::stream_flags::profiling);
+    }
 
     virtual dnnl::impl::status_t zero_pad(const dnnl::impl::memory_t *memory,
             const dnnl::impl::exec_ctx_t &ctx);
 
-    dnnl::impl::stream_impl_t *impl() { return impl_.get(); }
-
 #if DNNL_CPU_RUNTIME == DNNL_RUNTIME_THREADPOOL
+    dnnl_stream(dnnl::impl::engine_t *engine,
+            dnnl::threadpool_interop::threadpool_iface *threadpool)
+        : dnnl_stream(engine, dnnl::impl::stream_flags::in_order) {
+        assert(engine->kind() == dnnl::impl::engine_kind::cpu);
+        threadpool_ = threadpool;
+    }
+
     dnnl::impl::status_t get_threadpool(
             dnnl::threadpool_interop::threadpool_iface **threadpool) const {
         using namespace dnnl::impl;
         if (engine_->kind() != engine_kind::cpu)
             return status::invalid_arguments;
-        return impl_->get_threadpool(threadpool);
+        *threadpool = threadpool_;
+        return status::success;
     }
 #endif
 
 protected:
     dnnl::impl::engine_t *engine_;
-    std::unique_ptr<dnnl::impl::stream_impl_t> impl_;
+    unsigned flags_;
+#if DNNL_CPU_RUNTIME == DNNL_RUNTIME_THREADPOOL
+    dnnl::threadpool_interop::threadpool_iface *threadpool_ = nullptr;
+#endif
 };
 
 #endif

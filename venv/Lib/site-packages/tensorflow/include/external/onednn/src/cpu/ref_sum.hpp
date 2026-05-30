@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2017-2024 Intel Corporation
+* Copyright 2017-2022 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ struct ref_sum_t : public primitive_t {
 
         status_t init(engine_t *engine) {
             bool ok = cpu_sum_pd_t::init(engine) == status::success;
-            VDISPATCH_SUM(ok, VERBOSE_BAD_ENGINE_KIND);
+            if (!ok) return status::unimplemented;
 
             if (has_zero_dim_memory()) return status::success;
 
@@ -97,10 +97,9 @@ struct ref_sum_t : public primitive_t {
 
         scales_mem_.resize(n);
         for (size_t i = 0; i < n; ++i)
-            CHECK(safe_ptr_assign(scales_mem_[i],
-                    new memory_t(get_service_engine(), &scales_md,
-                            use_runtime_ptr,
-                            const_cast<float *>(&(scales[i])))));
+            scales_mem_[i] = std::make_shared<memory_t>(get_service_engine(),
+                    &scales_md, use_runtime_ptr,
+                    const_cast<float *>(&(scales[i])));
         return status::success;
     }
 
@@ -117,17 +116,14 @@ struct ref_sum_t : public primitive_t {
                         key_sum_reduction)
                 : nullptr;
         auto dst = ctx.args().at(DNNL_ARG_DST);
-
-        std::unique_ptr<memory_t, memory_deleter_t> acc;
-        CHECK(safe_ptr_assign(acc,
-                new memory_t(dst.mem->engine(), pd()->dst_acc_md(),
-                        std::move(sum_reduce))));
-        memory_arg_t dst_acc = {acc.get(), false};
+        memory_t acc(
+                dst.mem->engine(), pd()->dst_acc_md(), std::move(sum_reduce));
+        memory_arg_t dst_acc = {&acc, false};
 
         /* fix: clang MemorySanitizer: use-of-uninitialized-value */
         if (pd()->need_output_reorder()) {
-            const memory_desc_wrapper acc_d(acc->md());
-            std::memset(acc->memory_storage()->data_handle(), 0, acc_d.size());
+            const memory_desc_wrapper acc_d(acc.md());
+            std::memset(acc.memory_storage()->data_handle(), 0, acc_d.size());
         }
 
         for (int i = 0; i < n; ++i) {
@@ -144,7 +140,7 @@ struct ref_sum_t : public primitive_t {
         }
 
         if (pd()->need_output_reorder()) {
-            dst_acc.is_const = true;
+            dst_acc = {&acc, true};
             r_args[DNNL_ARG_SRC] = dst_acc;
             r_args[DNNL_ARG_DST] = dst;
             exec_ctx_t r_ctx(ctx, std::move(r_args));
@@ -159,7 +155,7 @@ struct ref_sum_t : public primitive_t {
 private:
     const pd_t *pd() const { return (const pd_t *)primitive_t::pd().get(); }
     std::vector<std::shared_ptr<primitive_t>> reorders_;
-    std::vector<std::unique_ptr<memory_t, memory_deleter_t>> scales_mem_;
+    std::vector<std::shared_ptr<memory_t>> scales_mem_;
 };
 
 } // namespace cpu

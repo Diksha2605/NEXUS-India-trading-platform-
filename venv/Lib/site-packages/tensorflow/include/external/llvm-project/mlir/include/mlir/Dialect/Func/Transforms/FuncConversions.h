@@ -13,7 +13,6 @@
 #ifndef MLIR_DIALECT_FUNC_TRANSFORMS_FUNCCONVERSIONS_H_
 #define MLIR_DIALECT_FUNC_TRANSFORMS_FUNCCONVERSIONS_H_
 
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -30,8 +29,7 @@ class RewritePatternSet;
 /// Add a pattern to the given pattern list to convert the operand and result
 /// types of a CallOp with the given type converter.
 void populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
-                                         const TypeConverter &converter,
-                                         PatternBenefit benefit = 1);
+                                         TypeConverter &converter);
 
 /// Add a pattern to the given pattern list to rewrite branch operations to use
 /// operands that have been legalized by the conversion framework. This can only
@@ -43,27 +41,25 @@ void populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
 /// shouldConvertBranchOperand. This callback should return true if branchOp's
 /// operand at index idx should be converted.
 void populateBranchOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter,
+    RewritePatternSet &patterns, TypeConverter &converter,
     function_ref<bool(BranchOpInterface branchOp, int idx)>
-        shouldConvertBranchOperand = nullptr,
-    PatternBenefit benefit = 1);
+        shouldConvertBranchOperand = nullptr);
 
 /// Return true if op is a BranchOpInterface op whose operands are all legal
 /// according to converter.
-bool isLegalForBranchOpInterfaceTypeConversionPattern(
-    Operation *op, const TypeConverter &converter);
+bool isLegalForBranchOpInterfaceTypeConversionPattern(Operation *op,
+                                                      TypeConverter &converter);
 
 /// Add a pattern to the given pattern list to rewrite `return` ops to use
 /// operands that have been legalized by the conversion framework.
 void populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
-                                           const TypeConverter &converter,
-                                           PatternBenefit benefit = 1);
+                                           TypeConverter &converter);
 
 /// For ReturnLike ops (except `return`), return True. If op is a `return` &&
 /// returnOpAlwaysLegal is false, legalize op according to converter. Otherwise,
 /// return false.
 bool isLegalForReturnOpTypeConversionPattern(Operation *op,
-                                             const TypeConverter &converter,
+                                             TypeConverter &converter,
                                              bool returnOpAlwaysLegal = false);
 
 /// Return true if op is neither BranchOpInterface nor ReturnLike.

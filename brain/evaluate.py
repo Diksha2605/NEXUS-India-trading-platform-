@@ -34,19 +34,14 @@ def evaluate_model(symbol, tf):
 
     try:
         import tensorflow as tf_lib
-        from sklearn.preprocessing import MinMaxScaler
         from config import PROC_DIR, TIMEFRAMES as TF_CFG
         import pandas as pd
 
         # Load scaler
         sd     = np.load(spath, allow_pickle=True)
-        scaler = MinMaxScaler()
-        scaler.min_           = sd["min_"]
-        scaler.scale_         = sd["scale_"]
-        scaler.data_min_      = sd["data_min_"]
-        scaler.data_max_      = sd["data_max_"]
-        scaler.data_range_    = sd["data_range_"]
-        scaler.n_features_in_ = int(sd["n_features_in_"])
+        median = sd["median"]
+        std    = sd["std"].copy()
+        std[std == 0] = 1
 
         model    = tf_lib.keras.models.load_model(mpath, compile=False)
         tf_label = TF_CFG[tf]["label"]
@@ -57,28 +52,29 @@ def evaluate_model(symbol, tf):
             return result
 
         df   = pd.read_csv(dpath, index_col="Datetime", parse_dates=True)
-        COLS = [c for c in ["Open","High","Low","Close","Volume",
-                             "RSI","MACD","EMA_9","EMA_21","ATR",
-                             "VWAP","Vol_spike","BB_upper","BB_lower"]
-                if c in df.columns]
+        COLS = [c for c in list(sd["features"]) if c in df.columns]
 
-        SEQ  = 60
+        SEQ  = 30
         data = df[COLS].dropna().tail(200 + SEQ)
         if len(data) < SEQ + 10:
             result["error"] = "Not enough data"
             return result
 
-        scaled = scaler.transform(data[COLS])
+        arr    = data[COLS].values.astype(np.float32)
+        scaled = (arr - median) / std
+        scaled = np.clip(scaled, -3, 3)
+        scaled = (scaled + 3) / 6
+
         X, y_true = [], []
         for i in range(SEQ, len(scaled) - 1):
             X.append(scaled[i - SEQ:i])
             y_true.append(1 if data["Close"].iloc[i+1] > data["Close"].iloc[i] else 0)
 
-        X      = np.array(X)
+        X      = np.array(X, dtype=np.float32)
         y_true = np.array(y_true)
-        y_pred_raw    = model.predict(X, verbose=0).flatten()
-        curr_closes   = data["Close"].values[SEQ:-1]
-        y_pred        = (y_pred_raw > curr_closes).astype(int)
+
+        y_pred_raw = model.predict(X, verbose=0).flatten()
+        y_pred     = (y_pred_raw >= 0.5).astype(int)
 
         total    = len(y_true)
         correct  = int(np.sum(y_pred == y_true))
@@ -134,7 +130,7 @@ def run_evaluation():
         }
         print(f"\n  Avg Accuracy: {avg}%")
     else:
-        report["summary"] = {"note": "TensorFlow not installed — models not evaluated"}
+        report["summary"] = {"note": "No models evaluated"}
 
     ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(REPORTS_DIR, f"eval_{ts}.json")

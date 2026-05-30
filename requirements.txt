@@ -34,4 +34,5 @@ streamlit==1.35.0
 
 # Utilities
 colorama==0.4.6
-requests==2.32.3
+requests==2.32.3transformers==4.40.0
+torch==2.2.0

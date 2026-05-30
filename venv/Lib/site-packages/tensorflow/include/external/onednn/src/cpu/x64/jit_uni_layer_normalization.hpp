@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2019-2024 Intel Corporation
+* Copyright 2019-2023 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ struct stat_and_data_kernel_t {
     virtual void operator()(const void *src, void *dst, const float *scale,
             const float *shift, float *mean, float *var,
             const float *src_scales, const float *dst_scales,
-            const void *post_ops_binary_rhs_arg_vec,
             const size_t block_size) const {};
 
     virtual status_t create_kernel() { return status::success; }
@@ -94,7 +93,42 @@ struct jit_uni_layer_normalization_fwd_t : public primitive_t {
 
         DECLARE_COMMON_PD_T("jit:uni", jit_uni_layer_normalization_fwd_t);
 
-        status_t init(engine_t *engine);
+        status_t init(engine_t *engine) {
+            using namespace data_type;
+            using skip_mask_t = primitive_attr_t::skip_mask_t;
+            const memory_desc_wrapper src_d(src_md());
+
+            const bool ok = is_fwd() && !has_zero_dim_memory()
+                    && utils::one_of(
+                            src_md()->data_type, f32, bf16, f16, s8, u8)
+                    && utils::one_of(
+                            dst_md()->data_type, f32, bf16, f16, s8, u8)
+                    && IMPLICATION(utils::one_of(bf16, src_md()->data_type,
+                                           dst_md()->data_type),
+                            mayiuse(avx512_core) || mayiuse(avx2_vnni_2))
+                    && IMPLICATION(utils::one_of(f16, src_md()->data_type,
+                                           dst_md()->data_type),
+                            mayiuse(avx512_core_fp16) || mayiuse(avx2_vnni_2))
+                    && stat_md()->data_type == f32
+                    && check_scale_shift_data_type()
+                    && attr()->has_default_values(skip_mask_t::scales_runtime)
+                    && attr_scales_ok() && set_default_formats_common()
+                    && src_d.is_blocking_desc()
+                    // plain format, last logical dim is last physical
+                    && src_d.blocking_desc().strides[ndims() - 1] == 1;
+            if (!ok) return status::unimplemented;
+
+            CHECK(fill_compatible_stats_md(*src_md(), reordered_stat_md_));
+
+            if (reordered_stat_md_ != *stat_md() && !stats_are_tmp()) {
+                CHECK(reorder_primitive_desc_create(reorder_pd_, engine,
+                        stats_are_src() ? stat_md() : &reordered_stat_md_,
+                        stats_are_src() ? &reordered_stat_md_ : stat_md()));
+            }
+
+            init_scratchpad();
+            return status::success;
+        }
 
         bool use_tmp_stats() const { return reorder_pd_ || stats_are_tmp(); }
 
@@ -153,29 +187,24 @@ struct jit_uni_layer_normalization_fwd_t : public primitive_t {
         auto scratchpad = ctx.get_scratchpad_grantor();
         auto mean_mem = scratchpad.get_memory_storage(key_lnorm_tmp_mean);
         auto variance_mem = scratchpad.get_memory_storage(key_lnorm_tmp_var);
-        std::unique_ptr<memory_t, memory_deleter_t> mean;
-        CHECK(safe_ptr_assign(mean,
-                new memory_t(engine, &(pd()->reordered_stat_md_),
-                        std::move(mean_mem))));
-        std::unique_ptr<memory_t, memory_deleter_t> variance;
-        CHECK(safe_ptr_assign(variance,
-                new memory_t(engine, &(pd()->reordered_stat_md_),
-                        std::move(variance_mem))));
+        memory_t mean(engine, &(pd()->reordered_stat_md_), std::move(mean_mem));
+        memory_t variance(
+                engine, &(pd()->reordered_stat_md_), std::move(variance_mem));
 
         // reorder input stats
         if (pd()->stats_are_src() && reorder_) {
-            reorder_stat(ctx, engine, ctx.args().at(DNNL_ARG_MEAN),
-                    {mean.get(), false});
+            reorder_stat(
+                    ctx, engine, ctx.args().at(DNNL_ARG_MEAN), {&mean, false});
             reorder_stat(ctx, engine, ctx.args().at(DNNL_ARG_VARIANCE),
-                    {variance.get(), false});
+                    {&variance, false});
         }
         status_t status = execute_forward(ctx);
         if (status != status::success) return status;
         // reorder output stats
         if (!pd()->stats_are_src() && reorder_) {
-            reorder_stat(ctx, engine, {mean.get(), true},
-                    ctx.args().at(DNNL_ARG_MEAN));
-            reorder_stat(ctx, engine, {variance.get(), true},
+            reorder_stat(
+                    ctx, engine, {&mean, true}, ctx.args().at(DNNL_ARG_MEAN));
+            reorder_stat(ctx, engine, {&variance, true},
                     ctx.args().at(DNNL_ARG_VARIANCE));
         }
 
@@ -201,44 +230,27 @@ struct jit_uni_layer_normalization_bwd_t : public primitive_t {
             using namespace data_type;
             const memory_desc_wrapper src_d(src_md());
 
-            VDISPATCH_LNORM(!is_fwd(), VERBOSE_BAD_PROPKIND);
-            VDISPATCH_LNORM(!has_zero_dim_memory(), VERBOSE_EMPTY_TENSOR, "");
-            // disabling verbose dispatch checks for unsupported isa for better readability
-            if (!mayiuse(avx2))
-                return status::unimplemented; // sse41 is not supported yet
-
-            VDISPATCH_LNORM(utils::one_of(src_md()->data_type, f32, bf16, f16),
-                    VERBOSE_UNSUPPORTED_DT);
-            VDISPATCH_LNORM(
-                    utils::one_of(diff_dst_md()->data_type, f32, bf16, f16),
-                    VERBOSE_UNSUPPORTED_DT);
-            VDISPATCH_LNORM(
-                    utils::one_of(diff_src_md()->data_type, f32, bf16, f16),
-                    VERBOSE_UNSUPPORTED_DT);
-            VDISPATCH_LNORM(IMPLICATION(utils::one_of(bf16, src_md()->data_type,
-                                                diff_dst_md()->data_type,
-                                                diff_src_md()->data_type),
-                                    mayiuse(avx512_core)),
-                    VERBOSE_ISA_DT_MISMATCH);
-            VDISPATCH_LNORM(IMPLICATION(utils::one_of(f16, src_md()->data_type,
-                                                diff_dst_md()->data_type,
-                                                diff_src_md()->data_type),
-                                    mayiuse(avx512_core_fp16)),
-                    VERBOSE_ISA_DT_MISMATCH);
-            VDISPATCH_LNORM(
-                    stat_md()->data_type == f32, VERBOSE_UNSUPPORTED_DT);
-            VDISPATCH_LNORM(check_scale_shift_data_type(),
-                    VERBOSE_UNSUPPORTED_FEATURE,
-                    "unsupported scale or shift data type");
-            VDISPATCH_LNORM(
-                    attr()->has_default_values(), VERBOSE_UNSUPPORTED_ATTR);
-            VDISPATCH_LNORM(
-                    set_default_formats_common(), VERBOSE_UNSUPPORTED_TAG);
-            VDISPATCH_LNORM(src_d.is_blocking_desc(), VERBOSE_BLOCKING_FAIL,
-                    "blocking descriptor fail");
-            // plain format, last logical dim is last physical
-            VDISPATCH_LNORM(src_d.blocking_desc().strides[ndims() - 1] == 1,
-                    VERBOSE_BLOCKING_FAIL, "bad stride value");
+            const bool ok = !is_fwd() && !has_zero_dim_memory()
+                    && mayiuse(avx2) // sse41 is not supported yet
+                    && utils::one_of(src_md()->data_type, f32, bf16, f16)
+                    && utils::one_of(diff_dst_md()->data_type, f32, bf16, f16)
+                    && utils::one_of(diff_src_md()->data_type, f32, bf16, f16)
+                    && IMPLICATION(utils::one_of(bf16, src_md()->data_type,
+                                           diff_dst_md()->data_type,
+                                           diff_src_md()->data_type),
+                            mayiuse(avx512_core))
+                    && IMPLICATION(utils::one_of(f16, src_md()->data_type,
+                                           diff_dst_md()->data_type,
+                                           diff_src_md()->data_type),
+                            mayiuse(avx512_core_fp16))
+                    && stat_md()->data_type == f32
+                    && check_scale_shift_data_type()
+                    && attr()->has_default_values()
+                    && set_default_formats_common()
+                    && src_d.is_blocking_desc()
+                    // plain format, last logical dim is last physical
+                    && src_d.blocking_desc().strides[ndims() - 1] == 1;
+            if (!ok) return status::unimplemented;
 
             CHECK(fill_compatible_stats_md(*src_md(), reordered_stat_md_));
 
@@ -320,18 +332,14 @@ struct jit_uni_layer_normalization_bwd_t : public primitive_t {
             auto mean_mem = scratchpad.get_memory_storage(key_lnorm_tmp_mean);
             auto variance_mem
                     = scratchpad.get_memory_storage(key_lnorm_tmp_var);
-            std::unique_ptr<memory_t, memory_deleter_t> mean;
-            CHECK(safe_ptr_assign(mean,
-                    new memory_t(engine, &(pd()->reordered_stat_md_),
-                            std::move(mean_mem))));
-            std::unique_ptr<memory_t, memory_deleter_t> variance;
-            CHECK(safe_ptr_assign(variance,
-                    new memory_t(engine, &(pd()->reordered_stat_md_),
-                            std::move(variance_mem))));
-            reorder_stat(ctx, engine, ctx.args().at(DNNL_ARG_MEAN),
-                    {mean.get(), false});
+            memory_t mean(
+                    engine, &(pd()->reordered_stat_md_), std::move(mean_mem));
+            memory_t variance(engine, &(pd()->reordered_stat_md_),
+                    std::move(variance_mem));
+            reorder_stat(
+                    ctx, engine, ctx.args().at(DNNL_ARG_MEAN), {&mean, false});
             reorder_stat(ctx, engine, ctx.args().at(DNNL_ARG_VARIANCE),
-                    {variance.get(), false});
+                    {&variance, false});
         }
 
         return execute_backward(ctx);
